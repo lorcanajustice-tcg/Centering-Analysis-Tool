@@ -28,8 +28,9 @@ examples/*.jpg
 examples/*.jpeg
 examples/*.png
 
-# Local Claude instructions (not distributed)
+# Local Claude instructions / working notes (not distributed)
 CLAUDE.md
+TODO.md
 
 # OS cruft
 Thumbs.db
