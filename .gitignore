@@ -28,6 +28,9 @@ examples/*.jpg
 examples/*.jpeg
 examples/*.png
 
+# Local Claude instructions (not distributed)
+CLAUDE.md
+
 # OS cruft
 Thumbs.db
 .DS_Store
