@@ -31,6 +31,7 @@ examples/*.png
 # Local Claude instructions / working notes (not distributed)
 CLAUDE.md
 TODO.md
+DEV-NOTES.md
 
 # OS cruft
 Thumbs.db
