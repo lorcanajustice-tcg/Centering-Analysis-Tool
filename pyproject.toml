@@ -1,0 +1,19 @@
+[project]
+name = "centering"
+version = "0.1.0"
+description = "Trading-card cut/print centering analysis from phone photos"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [{name = "Justice Barnett"}]
+requires-python = ">=3.10"
+dependencies = ["numpy", "opencv-python-headless", "pillow", "pillow-heif"]
+
+[project.scripts]
+centering = "centering.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]

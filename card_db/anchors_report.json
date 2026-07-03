@@ -1,0 +1,3482 @@
+{
+  "bordered_character_frame": {
+    "n_cards": 2672,
+    "left_px": {
+      "n": 2672,
+      "mean": 60.494,
+      "std": 7.877,
+      "min": 0,
+      "max": 187,
+      "mode": 60,
+      "pct_within_2px_of_mode": 98.35,
+      "n_outliers_gt2px": 44
+    },
+    "right_px": {
+      "n": 2672,
+      "mean": 60.456,
+      "std": 8.543,
+      "min": 0,
+      "max": 324,
+      "mode": 60,
+      "pct_within_2px_of_mode": 98.5,
+      "n_outliers_gt2px": 40
+    },
+    "top_px": {
+      "n": 2672,
+      "mean": 68.607,
+      "std": 12.653,
+      "min": 0,
+      "max": 200,
+      "mode": 66,
+      "pct_within_2px_of_mode": 93.71,
+      "n_outliers_gt2px": 168
+    },
+    "band_top_px": {
+      "n": 2669,
+      "mean": 1906.8,
+      "std": 0.928,
+      "min": 1883,
+      "max": 1911,
+      "mode": 1907,
+      "pct_within_2px_of_mode": 99.66,
+      "n_outliers_gt2px": 9
+    }
+  },
+  "bordered_location_frame": {
+    "n_cards": 105,
+    "note": "Lorcana \"Location\" card type has a distinct frame layout (wider right margin, taller footer band). Not a crop defect.",
+    "left_px": {
+      "n": 105,
+      "mean": 69.705,
+      "std": 35.851,
+      "min": 60,
+      "max": 296,
+      "mode": 60,
+      "pct_within_2px_of_mode": 86.67,
+      "n_outliers_gt2px": 14
+    },
+    "right_px": {
+      "n": 105,
+      "mean": 142.524,
+      "std": 1.381,
+      "min": 132,
+      "max": 144,
+      "mode": 143,
+      "pct_within_2px_of_mode": 99.05,
+      "n_outliers_gt2px": 1
+    },
+    "top_px": {
+      "n": 105,
+      "mean": 65.305,
+      "std": 9.132,
+      "min": 0,
+      "max": 68,
+      "mode": 66,
+      "pct_within_2px_of_mode": 98.1,
+      "n_outliers_gt2px": 2
+    },
+    "band_top_px": {
+      "n": 105,
+      "mean": 1951.981,
+      "std": 272.264,
+      "min": -1,
+      "max": 1992,
+      "mode": 1991,
+      "pct_within_2px_of_mode": 94.29,
+      "n_outliers_gt2px": 6
+    }
+  },
+  "bordered_quest_promo_frame": {
+    "n_cards": 66,
+    "note": "Sets Q1/Q2 (a promo/quest product line) use a consistently different, more symmetric crop (left approx right approx 72-75px, top approx 88px) vs the main numbered sets. Internally self-consistent, so not flagged as an anomaly, just a distinct population.",
+    "left_px": {
+      "n": 66,
+      "mean": 72.788,
+      "std": 29.547,
+      "min": 60,
+      "max": 296,
+      "mode": 63,
+      "pct_within_2px_of_mode": 46.97,
+      "n_outliers_gt2px": 35
+    },
+    "right_px": {
+      "n": 66,
+      "mean": 74.47,
+      "std": 25.655,
+      "min": 57,
+      "max": 141,
+      "mode": 58,
+      "pct_within_2px_of_mode": 36.36,
+      "n_outliers_gt2px": 42
+    },
+    "top_px": {
+      "n": 66,
+      "mean": 75.045,
+      "std": 9.954,
+      "min": 66,
+      "max": 112,
+      "mode": 68,
+      "pct_within_2px_of_mode": 46.97,
+      "n_outliers_gt2px": 35
+    },
+    "band_top_px": {
+      "n": 66,
+      "mean": 1867.864,
+      "std": 68.726,
+      "min": 1800,
+      "max": 1992,
+      "mode": 1800,
+      "pct_within_2px_of_mode": 46.97,
+      "n_outliers_gt2px": 35
+    }
+  },
+  "tinted_border_foil_outliers": {
+    "n_cards": 16,
+    "note": "Cards whose corner pixels are dark but not pure black (black_level>20 vs normal ~11) \u2014 likely foil/holo border treatment interfering with simple thresholding. Excluded from main stats.",
+    "ids": [
+      "10-206",
+      "10-23-P3",
+      "10-236",
+      "10-24-P3",
+      "11-218",
+      "11-227",
+      "12-206",
+      "13-216",
+      "4-208",
+      "4-210",
+      "4-215",
+      "4-41-P3",
+      "9-213",
+      "9-215",
+      "9-39-P3",
+      "9-40-P3"
+    ]
+  },
+  "footer_emblem_bordered": {
+    "n_total": 2835,
+    "n_high_confidence_score_gt_0.6": 2654,
+    "y": {
+      "n": 2654,
+      "mean": 1899.731,
+      "std": 0.567,
+      "min": 1899,
+      "max": 1903,
+      "mode": 1900,
+      "pct_within_2px_of_mode": 98.98,
+      "n_outliers_gt2px": 27
+    },
+    "x": {
+      "n": 2654,
+      "mean": 646.083,
+      "std": 2.179,
+      "min": 640,
+      "max": 653,
+      "mode": 647,
+      "pct_within_2px_of_mode": 85.42,
+      "n_outliers_gt2px": 387
+    },
+    "low_score_flagged_ids": [
+      "1-1-P1-_TFC",
+      "1-11-P1",
+      "1-12-P1",
+      "1-2-P1",
+      "1-3-P1",
+      "1-4-P1",
+      "1-5-P1",
+      "1-6-P1",
+      "1-7-P1",
+      "10-102",
+      "10-135",
+      "10-136",
+      "10-148",
+      "10-170",
+      "10-18-P3",
+      "10-19-P3",
+      "10-20-P3",
+      "10-202",
+      "10-203",
+      "10-204",
+      "10-21-P3",
+      "10-22-P3",
+      "10-223",
+      "10-228",
+      "10-230",
+      "10-231",
+      "10-238",
+      "10-240",
+      "10-34",
+      "10-68",
+      "11-102",
+      "11-134",
+      "11-135",
+      "11-136",
+      "11-204",
+      "11-34",
+      "11-68",
+      "12-102",
+      "12-135",
+      "12-136",
+      "12-170",
+      "12-203",
+      "12-204",
+      "12-236",
+      "12-34",
+      "12-68",
+      "13-108",
+      "13-141",
+      "13-142",
+      "13-175",
+      "13-207",
+      "13-37",
+      "13-73",
+      "2-206",
+      "3-100",
+      "3-101",
+      "3-102",
+      "3-134",
+      "3-135",
+      "3-136",
+      "3-168",
+      "3-169",
+      "3-170",
+      "3-202",
+      "3-203",
+      "3-204",
+      "3-27-P1",
+      "3-32",
+      "3-33",
+      "3-34",
+      "3-66",
+      "3-67",
+      "3-68",
+      "4-101",
+      "4-102",
+      "4-135",
+      "4-136",
+      "4-169",
+      "4-170",
+      "4-203",
+      "4-204",
+      "4-206",
+      "4-207",
+      "4-214",
+      "4-216",
+      "4-222",
+      "4-33",
+      "4-34",
+      "4-35-P1",
+      "4-67",
+      "4-68",
+      "4-7-D23",
+      "5-101",
+      "5-102",
+      "5-135",
+      "5-136",
+      "5-169",
+      "5-170",
+      "5-203",
+      "5-204",
+      "5-33",
+      "5-34",
+      "5-67",
+      "5-68",
+      "6-101",
+      "6-102",
+      "6-135",
+      "6-136",
+      "6-169",
+      "6-170",
+      "6-203",
+      "6-204",
+      "6-34",
+      "6-35",
+      "6-68",
+      "6-69",
+      "7-16-D23",
+      "7-20-P2",
+      "7-21-P2",
+      "7-22-P2",
+      "7-23-P2",
+      "7-24-P2-A",
+      "7-37-P3",
+      "7-38-P3",
+      "8-28-P2",
+      "8-29-P2",
+      "8-30-P2",
+      "8-31-P2",
+      "8-32-P2",
+      "8-8-D23",
+      "9-102",
+      "9-136",
+      "9-170",
+      "9-204",
+      "9-3-P3",
+      "9-34",
+      "9-4-P3",
+      "9-68",
+      "9-7-P3",
+      "9-71",
+      "9-8-P3",
+      "9-9-P3",
+      "Q1-1",
+      "Q1-10",
+      "Q1-11",
+      "Q1-12",
+      "Q1-13",
+      "Q1-14",
+      "Q1-15",
+      "Q1-16",
+      "Q1-17",
+      "Q1-18",
+      "Q1-19",
+      "Q1-2",
+      "Q1-20",
+      "Q1-21",
+      "Q1-22",
+      "Q1-23",
+      "Q1-24",
+      "Q1-25",
+      "Q1-26",
+      "Q1-27",
+      "Q1-28",
+      "Q1-29",
+      "Q1-3",
+      "Q1-30",
+      "Q1-31",
+      "Q1-4",
+      "Q1-5",
+      "Q1-6",
+      "Q1-7",
+      "Q1-8",
+      "Q1-9",
+      "Q2-28",
+      "Q2-29",
+      "Q2-30",
+      "Q2-31",
+      "Q2-32",
+      "Q2-33",
+      "Q2-34",
+      "Q2-35"
+    ]
+  },
+  "footer_emblem_nonbordered_fullart": {
+    "n_total": 360,
+    "n_high_confidence_score_gt_0.55": 133,
+    "y": {
+      "n": 133,
+      "mean": 1900.602,
+      "std": 1.798,
+      "min": 1899,
+      "max": 1903,
+      "mode": 1899,
+      "pct_within_2px_of_mode": 63.91,
+      "n_outliers_gt2px": 48
+    },
+    "x": {
+      "n": 133,
+      "mean": 642.857,
+      "std": 8.903,
+      "min": 590,
+      "max": 650,
+      "mode": 641,
+      "pct_within_2px_of_mode": 48.12,
+      "n_outliers_gt2px": 69
+    },
+    "note": "Template matching is much noisier on full-art (Enchanted/Special/full-art Epic-Legendary-Iconic) cards because background art varies. Only high-score matches are trustworthy; low scorers listed separately.",
+    "low_score_flagged_ids": [
+      "1-1-C1",
+      "1-1-D23",
+      "1-10-C1",
+      "1-10-P3",
+      "1-20-P1",
+      "1-21-P1",
+      "1-215",
+      "1-22-P1",
+      "1-23-P1",
+      "1-4-C1",
+      "1-8-C1",
+      "10-224",
+      "10-225",
+      "10-226",
+      "10-227",
+      "10-229",
+      "10-232",
+      "10-233",
+      "10-234",
+      "10-235",
+      "10-237",
+      "10-239",
+      "10-241",
+      "10-242",
+      "10-27-P3",
+      "10-36-P3",
+      "11-1-PD1",
+      "11-2-PD1",
+      "11-223",
+      "11-224",
+      "11-225",
+      "11-226",
+      "11-228",
+      "11-229",
+      "11-230",
+      "11-231",
+      "11-232",
+      "11-233",
+      "11-234",
+      "11-235",
+      "11-236",
+      "11-237",
+      "11-238",
+      "11-239",
+      "11-240",
+      "11-241",
+      "11-242",
+      "11-28-P3",
+      "11-29-P3",
+      "11-30-P3",
+      "11-32-P3",
+      "11-42-P3",
+      "12-223",
+      "12-224",
+      "12-225",
+      "12-226",
+      "12-227",
+      "12-228",
+      "12-229",
+      "12-230",
+      "12-231",
+      "12-232",
+      "12-233",
+      "12-234",
+      "12-235",
+      "12-237",
+      "12-238",
+      "12-239",
+      "12-240",
+      "12-241",
+      "12-242",
+      "12-43-P3",
+      "12-44-P3",
+      "12-45-P3",
+      "12-46-P3",
+      "12-47-P3",
+      "12-48-P3",
+      "12-49-P3",
+      "12-50-P3",
+      "12-51-P3",
+      "13-10-P4",
+      "13-11-P4",
+      "13-226",
+      "13-227",
+      "13-228",
+      "13-229",
+      "13-230",
+      "13-231",
+      "13-232",
+      "13-233",
+      "13-234",
+      "13-235",
+      "13-236",
+      "13-237",
+      "13-238",
+      "13-239",
+      "13-240",
+      "13-241",
+      "13-242",
+      "13-243",
+      "13-244",
+      "13-245",
+      "13-3-PD1",
+      "13-4-PD1",
+      "13-5-PD1",
+      "13-6-PD1",
+      "13-7-PD1",
+      "13-8-PD1",
+      "13-9-P4",
+      "2-18-P1",
+      "2-19-P1",
+      "2-2-D23",
+      "3-207",
+      "3-209",
+      "3-213",
+      "3-216",
+      "3-219",
+      "3-3-D23",
+      "4-15-P3",
+      "4-212",
+      "4-213",
+      "4-218",
+      "4-219",
+      "4-4-D23",
+      "5-205",
+      "5-206",
+      "5-208",
+      "5-209",
+      "5-210",
+      "5-211",
+      "5-212",
+      "5-214",
+      "5-215",
+      "5-216",
+      "5-217",
+      "5-218",
+      "5-219",
+      "5-220",
+      "5-221",
+      "5-222",
+      "5-5-D23",
+      "5-6-P3",
+      "5-7-C1",
+      "6-13-P3",
+      "6-14-P2",
+      "6-14-P3",
+      "6-16-P3",
+      "6-17-P3",
+      "6-18-P2",
+      "6-205",
+      "6-206",
+      "6-207",
+      "6-208",
+      "6-209",
+      "6-210",
+      "6-211",
+      "6-212",
+      "6-213",
+      "6-214",
+      "6-215",
+      "6-216",
+      "6-217",
+      "6-218",
+      "6-219",
+      "6-220",
+      "6-221",
+      "6-222",
+      "6-25-P2",
+      "6-6-D23",
+      "7-205",
+      "7-206",
+      "7-207",
+      "7-208",
+      "7-209",
+      "7-210",
+      "7-211",
+      "7-212",
+      "7-213",
+      "7-214",
+      "7-215",
+      "7-216",
+      "7-217",
+      "7-218",
+      "7-219",
+      "7-220",
+      "7-221",
+      "7-24-P2-B",
+      "8-205",
+      "8-206",
+      "8-207",
+      "8-208",
+      "8-209",
+      "8-210",
+      "8-211",
+      "8-212",
+      "8-213",
+      "8-215",
+      "8-216",
+      "8-217",
+      "8-218"
+    ]
+  },
+  "per_group_stats_bordered_character_frame": [
+    {
+      "setCode": "1",
+      "rarity": "Uncommon",
+      "promoGrouping": null,
+      "n": 54,
+      "left_px_mean": 60.13,
+      "right_px_mean": 60.15,
+      "top_px_mean": 66.57,
+      "band_top_px_mean": 1906.91
+    },
+    {
+      "setCode": "1",
+      "rarity": "Special",
+      "promoGrouping": "P1",
+      "n": 14,
+      "left_px_mean": 60.07,
+      "right_px_mean": 60.0,
+      "top_px_mean": 66.43,
+      "band_top_px_mean": 1906.79
+    },
+    {
+      "setCode": "1",
+      "rarity": "Super Rare",
+      "promoGrouping": null,
+      "n": 18,
+      "left_px_mean": 60.0,
+      "right_px_mean": 60.06,
+      "top_px_mean": 65.78,
+      "band_top_px_mean": 1907.0
+    },
+    {
+      "setCode": "1",
+      "rarity": "Common",
+      "promoGrouping": null,
+      "n": 72,
+      "left_px_mean": 60.06,
+      "right_px_mean": 60.07,
+      "top_px_mean": 66.12,
+      "band_top_px_mean": 1906.94
+    },
+    {
+      "setCode": "1",
+      "rarity": "Rare",
+      "promoGrouping": null,
+      "n": 48,
+      "left_px_mean": 60.19,
+      "right_px_mean": 60.23,
+      "top_px_mean": 66.35,
+      "band_top_px_mean": 1906.96
+    },
+    {
+      "setCode": "1",
+      "rarity": "Legendary",
+      "promoGrouping": null,
+      "n": 12,
+      "left_px_mean": 60.0,
+      "right_px_mean": 65.42,
+      "top_px_mean": 74.0,
+      "band_top_px_mean": 1907.0
+    },
+    {
+      "setCode": "10",
+      "rarity": "Rare",
+      "promoGrouping": null,
+      "n": 43,
+      "left_px_mean": 60.05,
+      "right_px_mean": 60.23,
+      "top_px_mean": 70.3,
+      "band_top_px_mean": 1907.0
+    },
+    {
+      "setCode": "10",
+      "rarity": "Common",
+      "promoGrouping": null,
+      "n": 72,
+      "left_px_mean": 64.4,
+      "right_px_mean": 62.54,
+      "top_px_mean": 75.92,
+      "band_top_px_mean": 1907.0
+    },
+    {
+      "setCode": "10",
+      "rarity": "Uncommon",
+      "promoGrouping": null,
+      "n": 51,
+      "left_px_mean": 60.65,
+      "right_px_mean": 62.84,
+      "top_px_mean": 75.35,
+      "band_top_px_mean": 1907.0
+    },
+    {
+      "setCode": "10",
+      "rarity": "Super Rare",
+      "promoGrouping": null,
+      "n": 17,
+      "left_px_mean": 59.88,
+      "right_px_mean": 61.82,
+      "top_px_mean": 68.35,
+      "band_top_px_mean": 1907.0
+    },
+    {
+      "setCode": "10",
+      "rarity": "Legendary",
+      "promoGrouping": null,
+      "n": 12,
+      "left_px_mean": 59.83,
+      "right_px_mean": 59.92,
+      "top_px_mean": 76.08,
+      "band_top_px_mean": 1907.08
+    },
+    {
+      "setCode": "10",
+      "rarity": "Special",
+      "promoGrouping": "P3",
+      "n": 6,
+      "left_px_mean": 59.83,
+      "right_px_mean": 59.83,
+      "top_px_mean": 80.17,
+      "band_top_px_mean": 1907.0
+    },
+    {
+      "setCode": "10",
+      "rarity": "Epic",
+      "promoGrouping": null,
+      "n": 5,
+      "left_px_mean": 0.0,
+      "right_px_mean": 20.0,
+      "top_px_mean": 110.4,
+      "band_top_px_mean": 1907.0
+    },
+    {
+      "setCode": "10",
+      "rarity": "Enchanted",
+      "promoGrouping": null,
+      "n": 6,
+      "left_px_mean": 32.67,
+      "right_px_mean": 59.67,
+      "top_px_mean": 69.5,
+      "band_top_px_mean": 1888.0
+    },
+    {
+      "setCode": "11",
+      "rarity": "Common",
+      "promoGrouping": null,
+      "n": 69,
+      "left_px_mean": 60.09,
+      "right_px_mean": 60.12,
+      "top_px_mean": 69.64,
+      "band_top_px_mean": 1906.96
+    },
+    {
+      "setCode": "11",
+      "rarity": "Rare",
+      "promoGrouping": null,
+      "n": 47,
+      "left_px_mean": 60.17,
+      "right_px_mean": 62.79,
+      "top_px_mean": 66.83,
+      "band_top_px_mean": 1906.91
+    },
+    {
+      "setCode": "11",
+      "rarity": "Legendary",
+      "promoGrouping": null,
+      "n": 12,
+      "left_px_mean": 59.83,
+      "right_px_mean": 59.75,
+      "top_px_mean": 65.5,
+      "band_top_px_mean": 1907.0
+    },
+    {
+      "setCode": "11",
+      "rarity": "Uncommon",
+      "promoGrouping": null,
+      "n": 51,
+      "left_px_mean": 60.12,
+      "right_px_mean": 60.12,
+      "top_px_mean": 66.55,
+      "band_top_px_mean": 1906.94
+    },
+    {
+      "setCode": "11",
+      "rarity": "Super Rare",
+      "promoGrouping": null,
+      "n": 18,
+      "left_px_mean": 60.0,
+      "right_px_mean": 60.06,
+      "top_px_mean": 66.56,
+      "band_top_px_mean": 1907.0
+    },
+    {
+      "setCode": "11",
+      "rarity": "Special",
+      "promoGrouping": "P3",
+      "n": 2,
+      "left_px_mean": 60.0,
+      "right_px_mean": 60.0,
+      "top_px_mean": 66.0,
+      "band_top_px_mean": 1907.0
+    },
+    {
+      "setCode": "12",
+      "rarity": "Common",
+      "promoGrouping": null,
+      "n": 70,
+      "left_px_mean": 60.61,
+      "right_px_mean": 60.1,
+      "top_px_mean": 68.83,
+      "band_top_px_mean": 1907.0
+    },
+    {
+      "setCode": "12",
+      "rarity": "Rare",
+      "promoGrouping": null,
+      "n": 42,
+      "left_px_mean": 60.12,
+      "right_px_mean": 60.14,
+      "top_px_mean": 66.52,
+      "band_top_px_mean": 1907.0
+    },
+    {
+      "setCode": "12",
+      "rarity": "Uncommon",
+      "promoGrouping": null,
+      "n": 54,
+      "left_px_mean": 60.17,
+      "right_px_mean": 62.37,
+      "top_px_mean": 66.28,
+      "band_top_px_mean": 1907.0
+    },
+    {
+      "setCode": "12",
+      "rarity": "Super Rare",
+      "promoGrouping": null,
+      "n": 18,
+      "left_px_mean": 62.67,
+      "right_px_mean": 60.06,
+      "top_px_mean": 66.11,
+      "band_top_px_mean": 1907.0
+    },
+    {
+      "setCode": "12",
+      "rarity": "Legendary",
+      "promoGrouping": null,
+      "n": 12,
+      "left_px_mean": 60.0,
+      "right_px_mean": 59.75,
+      "top_px_mean": 65.08,
+      "band_top_px_mean": 1907.0
+    },
+    {
+      "setCode": "12",
+      "rarity": "Enchanted",
+      "promoGrouping": null,
+      "n": 1,
+      "left_px_mean": 37.0,
+      "right_px_mean": 38.0,
+      "top_px_mean": 16.0,
+      "band_top_px_mean": null
+    },
+    {
+      "setCode": "12",
+      "rarity": "Special",
+      "promoGrouping": "P3",
+      "n": 2,
+      "left_px_mean": 60.0,
+      "right_px_mean": 60.0,
+      "top_px_mean": 65.5,
+      "band_top_px_mean": 1907.0
+    },
+    {
+      "setCode": "13",
+      "rarity": "Rare",
+      "promoGrouping": null,
+      "n": 46,
+      "left_px_mean": 60.2,
+      "right_px_mean": 60.35,
+      "top_px_mean": 68.04,
+      "band_top_px_mean": 1907.0
+    },
+    {
+      "setCode": "13",
+      "rarity": "Common",
+      "promoGrouping": null,
+      "n": 72,
+      "left_px_mean": 61.79,
+      "right_px_mean": 60.19,
+      "top_px_mean": 67.29,
+      "band_top_px_mean": 1907.0
+    },
+    {
+      "setCode": "13",
+      "rarity": "Legendary",
+      "promoGrouping": null,
+      "n": 12,
+      "left_px_mean": 59.83,
+      "right_px_mean": 61.17,
+      "top_px_mean": 65.92,
+      "band_top_px_mean": 1907.0
+    },
+    {
+      "setCode": "13",
+      "rarity": "Uncommon",
+      "promoGrouping": null,
+      "n": 52,
+      "left_px_mean": 61.67,
+      "right_px_mean": 60.63,
+      "top_px_mean": 66.75,
+      "band_top_px_mean": 1907.0
+    },
+    {
+      "setCode": "13",
+      "rarity": "Super Rare",
+      "promoGrouping": null,
+      "n": 18,
+      "left_px_mean": 60.11,
+      "right_px_mean": 60.22,
+      "top_px_mean": 66.61,
+      "band_top_px_mean": 1907.0
+    },
+    {
+      "setCode": "2",
+      "rarity": "Uncommon",
+      "promoGrouping": null,
+      "n": 54,
+      "left_px_mean": 62.91,
+      "right_px_mean": 62.0,
+      "top_px_mean": 68.63,
+      "band_top_px_mean": 1906.96
+    },
+    {
+      "setCode": "2",
+      "rarity": "Common",
+      "promoGrouping": null,
+      "n": 72,
+      "left_px_mean": 61.65,
+      "right_px_mean": 60.08,
+      "top_px_mean": 69.76,
+      "band_top_px_mean": 1906.96
+    },
+    {
+      "setCode": "2",
+      "rarity": "Rare",
+      "promoGrouping": null,
+      "n": 48,
+      "left_px_mean": 60.92,
+      "right_px_mean": 60.23,
+      "top_px_mean": 69.12,
+      "band_top_px_mean": 1906.98
+    },
+    {
+      "setCode": "2",
+      "rarity": "Legendary",
+      "promoGrouping": null,
+      "n": 12,
+      "left_px_mean": 60.08,
+      "right_px_mean": 60.25,
+      "top_px_mean": 66.17,
+      "band_top_px_mean": 1907.0
+    },
+    {
+      "setCode": "2",
+      "rarity": "Super Rare",
+      "promoGrouping": null,
+      "n": 18,
+      "left_px_mean": 60.0,
+      "right_px_mean": 60.17,
+      "top_px_mean": 71.39,
+      "band_top_px_mean": 1907.0
+    },
+    {
+      "setCode": "2",
+      "rarity": "Special",
+      "promoGrouping": "P1",
+      "n": 7,
+      "left_px_mean": 60.14,
+      "right_px_mean": 69.29,
+      "top_px_mean": 68.14,
+      "band_top_px_mean": 1906.57
+    },
+    {
+      "setCode": "2",
+      "rarity": "Enchanted",
+      "promoGrouping": null,
+      "n": 1,
+      "left_px_mean": 0.0,
+      "right_px_mean": 0.0,
+      "top_px_mean": 0.0,
+      "band_top_px_mean": 1911.0
+    },
+    {
+      "setCode": "3",
+      "rarity": "Rare",
+      "promoGrouping": null,
+      "n": 41,
+      "left_px_mean": 60.2,
+      "right_px_mean": 60.22,
+      "top_px_mean": 67.8,
+      "band_top_px_mean": 1906.88
+    },
+    {
+      "setCode": "3",
+      "rarity": "Common",
+      "promoGrouping": null,
+      "n": 70,
+      "left_px_mean": 60.09,
+      "right_px_mean": 60.09,
+      "top_px_mean": 67.67,
+      "band_top_px_mean": 1906.94
+    },
+    {
+      "setCode": "3",
+      "rarity": "Super Rare",
+      "promoGrouping": null,
+      "n": 19,
+      "left_px_mean": 59.95,
+      "right_px_mean": 60.0,
+      "top_px_mean": 67.47,
+      "band_top_px_mean": 1907.05
+    },
+    {
+      "setCode": "3",
+      "rarity": "Uncommon",
+      "promoGrouping": null,
+      "n": 48,
+      "left_px_mean": 60.1,
+      "right_px_mean": 60.1,
+      "top_px_mean": 66.9,
+      "band_top_px_mean": 1906.96
+    },
+    {
+      "setCode": "3",
+      "rarity": "Legendary",
+      "promoGrouping": null,
+      "n": 12,
+      "left_px_mean": 59.92,
+      "right_px_mean": 60.17,
+      "top_px_mean": 66.25,
+      "band_top_px_mean": 1907.0
+    },
+    {
+      "setCode": "3",
+      "rarity": "Special",
+      "promoGrouping": "P1",
+      "n": 4,
+      "left_px_mean": 60.0,
+      "right_px_mean": 60.0,
+      "top_px_mean": 67.0,
+      "band_top_px_mean": 1906.25
+    },
+    {
+      "setCode": "4",
+      "rarity": "Common",
+      "promoGrouping": null,
+      "n": 66,
+      "left_px_mean": 61.47,
+      "right_px_mean": 60.21,
+      "top_px_mean": 66.35,
+      "band_top_px_mean": 1906.92
+    },
+    {
+      "setCode": "4",
+      "rarity": "Super Rare",
+      "promoGrouping": null,
+      "n": 18,
+      "left_px_mean": 60.06,
+      "right_px_mean": 60.22,
+      "top_px_mean": 65.83,
+      "band_top_px_mean": 1907.0
+    },
+    {
+      "setCode": "4",
+      "rarity": "Uncommon",
+      "promoGrouping": null,
+      "n": 54,
+      "left_px_mean": 60.13,
+      "right_px_mean": 60.15,
+      "top_px_mean": 66.15,
+      "band_top_px_mean": 1906.98
+    },
+    {
+      "setCode": "4",
+      "rarity": "Rare",
+      "promoGrouping": null,
+      "n": 43,
+      "left_px_mean": 60.23,
+      "right_px_mean": 60.19,
+      "top_px_mean": 66.12,
+      "band_top_px_mean": 1906.98
+    },
+    {
+      "setCode": "4",
+      "rarity": "Legendary",
+      "promoGrouping": null,
+      "n": 14,
+      "left_px_mean": 59.93,
+      "right_px_mean": 60.0,
+      "top_px_mean": 66.07,
+      "band_top_px_mean": 1907.07
+    },
+    {
+      "setCode": "4",
+      "rarity": "Enchanted",
+      "promoGrouping": null,
+      "n": 3,
+      "left_px_mean": 39.0,
+      "right_px_mean": 58.33,
+      "top_px_mean": 76.67,
+      "band_top_px_mean": 1911.0
+    },
+    {
+      "setCode": "4",
+      "rarity": "Special",
+      "promoGrouping": "P1",
+      "n": 4,
+      "left_px_mean": 60.25,
+      "right_px_mean": 60.5,
+      "top_px_mean": 66.75,
+      "band_top_px_mean": 1906.75
+    },
+    {
+      "setCode": "4",
+      "rarity": "Special",
+      "promoGrouping": "D23",
+      "n": 1,
+      "left_px_mean": 60.0,
+      "right_px_mean": 61.0,
+      "top_px_mean": 68.0,
+      "band_top_px_mean": 1906.0
+    },
+    {
+      "setCode": "5",
+      "rarity": "Rare",
+      "promoGrouping": null,
+      "n": 43,
+      "left_px_mean": 60.67,
+      "right_px_mean": 60.95,
+      "top_px_mean": 67.56,
+      "band_top_px_mean": 1906.09
+    },
+    {
+      "setCode": "5",
+      "rarity": "Special",
+      "promoGrouping": "P2",
+      "n": 6,
+      "left_px_mean": 60.5,
+      "right_px_mean": 60.33,
+      "top_px_mean": 66.67,
+      "band_top_px_mean": 1906.17
+    },
+    {
+      "setCode": "5",
+      "rarity": "Common",
+      "promoGrouping": null,
+      "n": 72,
+      "left_px_mean": 60.4,
+      "right_px_mean": 60.31,
+      "top_px_mean": 70.56,
+      "band_top_px_mean": 1906.0
+    },
+    {
+      "setCode": "5",
+      "rarity": "Uncommon",
+      "promoGrouping": null,
+      "n": 48,
+      "left_px_mean": 60.52,
+      "right_px_mean": 60.48,
+      "top_px_mean": 69.35,
+      "band_top_px_mean": 1906.0
+    },
+    {
+      "setCode": "5",
+      "rarity": "Super Rare",
+      "promoGrouping": null,
+      "n": 18,
+      "left_px_mean": 60.33,
+      "right_px_mean": 60.5,
+      "top_px_mean": 67.72,
+      "band_top_px_mean": 1906.0
+    },
+    {
+      "setCode": "5",
+      "rarity": "Legendary",
+      "promoGrouping": null,
+      "n": 12,
+      "left_px_mean": 60.25,
+      "right_px_mean": 60.42,
+      "top_px_mean": 68.92,
+      "band_top_px_mean": 1906.08
+    },
+    {
+      "setCode": "6",
+      "rarity": "Uncommon",
+      "promoGrouping": null,
+      "n": 54,
+      "left_px_mean": 60.17,
+      "right_px_mean": 60.24,
+      "top_px_mean": 66.72,
+      "band_top_px_mean": 1907.0
+    },
+    {
+      "setCode": "6",
+      "rarity": "Common",
+      "promoGrouping": null,
+      "n": 66,
+      "left_px_mean": 61.5,
+      "right_px_mean": 60.17,
+      "top_px_mean": 68.24,
+      "band_top_px_mean": 1907.0
+    },
+    {
+      "setCode": "6",
+      "rarity": "Special",
+      "promoGrouping": "P2",
+      "n": 6,
+      "left_px_mean": 60.17,
+      "right_px_mean": 60.33,
+      "top_px_mean": 67.17,
+      "band_top_px_mean": 1906.17
+    },
+    {
+      "setCode": "6",
+      "rarity": "Super Rare",
+      "promoGrouping": null,
+      "n": 17,
+      "left_px_mean": 60.06,
+      "right_px_mean": 60.06,
+      "top_px_mean": 65.82,
+      "band_top_px_mean": 1907.0
+    },
+    {
+      "setCode": "6",
+      "rarity": "Rare",
+      "promoGrouping": null,
+      "n": 43,
+      "left_px_mean": 61.0,
+      "right_px_mean": 60.21,
+      "top_px_mean": 70.6,
+      "band_top_px_mean": 1906.98
+    },
+    {
+      "setCode": "6",
+      "rarity": "Legendary",
+      "promoGrouping": null,
+      "n": 12,
+      "left_px_mean": 59.83,
+      "right_px_mean": 60.0,
+      "top_px_mean": 65.58,
+      "band_top_px_mean": 1907.0
+    },
+    {
+      "setCode": "7",
+      "rarity": "Rare",
+      "promoGrouping": null,
+      "n": 48,
+      "left_px_mean": 60.25,
+      "right_px_mean": 60.29,
+      "top_px_mean": 70.6,
+      "band_top_px_mean": 1906.06
+    },
+    {
+      "setCode": "7",
+      "rarity": "Common",
+      "promoGrouping": null,
+      "n": 72,
+      "left_px_mean": 60.35,
+      "right_px_mean": 60.43,
+      "top_px_mean": 68.46,
+      "band_top_px_mean": 1906.0
+    },
+    {
+      "setCode": "7",
+      "rarity": "Uncommon",
+      "promoGrouping": null,
+      "n": 54,
+      "left_px_mean": 60.44,
+      "right_px_mean": 60.46,
+      "top_px_mean": 69.46,
+      "band_top_px_mean": 1906.02
+    },
+    {
+      "setCode": "7",
+      "rarity": "Super Rare",
+      "promoGrouping": null,
+      "n": 20,
+      "left_px_mean": 60.25,
+      "right_px_mean": 60.65,
+      "top_px_mean": 67.05,
+      "band_top_px_mean": 1906.15
+    },
+    {
+      "setCode": "7",
+      "rarity": "Legendary",
+      "promoGrouping": null,
+      "n": 12,
+      "left_px_mean": 60.08,
+      "right_px_mean": 60.0,
+      "top_px_mean": 66.75,
+      "band_top_px_mean": 1906.0
+    },
+    {
+      "setCode": "7",
+      "rarity": "Special",
+      "promoGrouping": "D23",
+      "n": 1,
+      "left_px_mean": 60.0,
+      "right_px_mean": 60.0,
+      "top_px_mean": 67.0,
+      "band_top_px_mean": 1907.0
+    },
+    {
+      "setCode": "7",
+      "rarity": "Special",
+      "promoGrouping": "P2",
+      "n": 8,
+      "left_px_mean": 60.0,
+      "right_px_mean": 60.0,
+      "top_px_mean": 66.5,
+      "band_top_px_mean": 1906.5
+    },
+    {
+      "setCode": "7",
+      "rarity": "Special",
+      "promoGrouping": "P3",
+      "n": 2,
+      "left_px_mean": 60.0,
+      "right_px_mean": 60.5,
+      "top_px_mean": 68.0,
+      "band_top_px_mean": 1906.0
+    },
+    {
+      "setCode": "8",
+      "rarity": "Uncommon",
+      "promoGrouping": null,
+      "n": 54,
+      "left_px_mean": 60.13,
+      "right_px_mean": 60.13,
+      "top_px_mean": 72.19,
+      "band_top_px_mean": 1907.0
+    },
+    {
+      "setCode": "8",
+      "rarity": "Common",
+      "promoGrouping": null,
+      "n": 72,
+      "left_px_mean": 60.08,
+      "right_px_mean": 60.42,
+      "top_px_mean": 67.64,
+      "band_top_px_mean": 1907.0
+    },
+    {
+      "setCode": "8",
+      "rarity": "Legendary",
+      "promoGrouping": null,
+      "n": 14,
+      "left_px_mean": 59.64,
+      "right_px_mean": 58.71,
+      "top_px_mean": 66.86,
+      "band_top_px_mean": 1907.0
+    },
+    {
+      "setCode": "8",
+      "rarity": "Super Rare",
+      "promoGrouping": null,
+      "n": 18,
+      "left_px_mean": 63.22,
+      "right_px_mean": 60.17,
+      "top_px_mean": 72.72,
+      "band_top_px_mean": 1907.0
+    },
+    {
+      "setCode": "8",
+      "rarity": "Rare",
+      "promoGrouping": null,
+      "n": 48,
+      "left_px_mean": 60.06,
+      "right_px_mean": 60.12,
+      "top_px_mean": 70.62,
+      "band_top_px_mean": 1907.0
+    },
+    {
+      "setCode": "8",
+      "rarity": "Special",
+      "promoGrouping": "P2",
+      "n": 8,
+      "left_px_mean": 60.0,
+      "right_px_mean": 60.0,
+      "top_px_mean": 71.75,
+      "band_top_px_mean": 1907.0
+    },
+    {
+      "setCode": "8",
+      "rarity": "Special",
+      "promoGrouping": "D23",
+      "n": 1,
+      "left_px_mean": 59.0,
+      "right_px_mean": 60.0,
+      "top_px_mean": 66.0,
+      "band_top_px_mean": 1907.0
+    },
+    {
+      "setCode": "9",
+      "rarity": "Super Rare",
+      "promoGrouping": null,
+      "n": 19,
+      "left_px_mean": 60.0,
+      "right_px_mean": 60.21,
+      "top_px_mean": 66.47,
+      "band_top_px_mean": 1907.05
+    },
+    {
+      "setCode": "9",
+      "rarity": "Rare",
+      "promoGrouping": null,
+      "n": 48,
+      "left_px_mean": 61.17,
+      "right_px_mean": 60.79,
+      "top_px_mean": 69.65,
+      "band_top_px_mean": 1907.0
+    },
+    {
+      "setCode": "9",
+      "rarity": "Special",
+      "promoGrouping": "P3",
+      "n": 7,
+      "left_px_mean": 59.71,
+      "right_px_mean": 59.86,
+      "top_px_mean": 76.0,
+      "band_top_px_mean": 1907.29
+    },
+    {
+      "setCode": "9",
+      "rarity": "Common",
+      "promoGrouping": null,
+      "n": 68,
+      "left_px_mean": 61.94,
+      "right_px_mean": 60.54,
+      "top_px_mean": 70.21,
+      "band_top_px_mean": 1907.0
+    },
+    {
+      "setCode": "9",
+      "rarity": "Uncommon",
+      "promoGrouping": null,
+      "n": 52,
+      "left_px_mean": 63.23,
+      "right_px_mean": 62.04,
+      "top_px_mean": 70.73,
+      "band_top_px_mean": 1907.0
+    },
+    {
+      "setCode": "9",
+      "rarity": "Legendary",
+      "promoGrouping": null,
+      "n": 12,
+      "left_px_mean": 62.0,
+      "right_px_mean": 59.92,
+      "top_px_mean": 65.17,
+      "band_top_px_mean": 1907.0
+    }
+  ],
+  "outlier_cards_gt2px_from_mode": [
+    {
+      "id": "1-74",
+      "field": "top_px_v2",
+      "value": 89,
+      "mode": 66,
+      "setCode": "1",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "1-123",
+      "field": "top_px_v2",
+      "value": 81,
+      "mode": 66,
+      "setCode": "1",
+      "rarity": "Rare"
+    },
+    {
+      "id": "1-76",
+      "field": "top_px_v2",
+      "value": 70,
+      "mode": 66,
+      "setCode": "1",
+      "rarity": "Rare"
+    },
+    {
+      "id": "1-18",
+      "field": "top_px_v2",
+      "value": 159,
+      "mode": 66,
+      "setCode": "1",
+      "rarity": "Legendary"
+    },
+    {
+      "id": "1-59",
+      "field": "right_px",
+      "value": 125,
+      "mode": 60,
+      "setCode": "1",
+      "rarity": "Legendary"
+    },
+    {
+      "id": "10-148",
+      "field": "top_px_v2",
+      "value": 80,
+      "mode": 66,
+      "setCode": "10",
+      "rarity": "Rare"
+    },
+    {
+      "id": "10-25",
+      "field": "top_px_v2",
+      "value": 157,
+      "mode": 66,
+      "setCode": "10",
+      "rarity": "Rare"
+    },
+    {
+      "id": "10-49",
+      "field": "top_px_v2",
+      "value": 75,
+      "mode": 66,
+      "setCode": "10",
+      "rarity": "Rare"
+    },
+    {
+      "id": "10-50",
+      "field": "top_px_v2",
+      "value": 80,
+      "mode": 66,
+      "setCode": "10",
+      "rarity": "Rare"
+    },
+    {
+      "id": "10-87",
+      "field": "top_px_v2",
+      "value": 112,
+      "mode": 66,
+      "setCode": "10",
+      "rarity": "Rare"
+    },
+    {
+      "id": "10-106",
+      "field": "top_px_v2",
+      "value": 194,
+      "mode": 66,
+      "setCode": "10",
+      "rarity": "Common"
+    },
+    {
+      "id": "10-11",
+      "field": "top_px_v2",
+      "value": 71,
+      "mode": 66,
+      "setCode": "10",
+      "rarity": "Common"
+    },
+    {
+      "id": "10-110",
+      "field": "top_px_v2",
+      "value": 97,
+      "mode": 66,
+      "setCode": "10",
+      "rarity": "Common"
+    },
+    {
+      "id": "10-138",
+      "field": "top_px_v2",
+      "value": 77,
+      "mode": 66,
+      "setCode": "10",
+      "rarity": "Common"
+    },
+    {
+      "id": "10-144",
+      "field": "right_px",
+      "value": 128,
+      "mode": 60,
+      "setCode": "10",
+      "rarity": "Common"
+    },
+    {
+      "id": "10-144",
+      "field": "top_px_v2",
+      "value": 146,
+      "mode": 66,
+      "setCode": "10",
+      "rarity": "Common"
+    },
+    {
+      "id": "10-161",
+      "field": "left_px",
+      "value": 147,
+      "mode": 60,
+      "setCode": "10",
+      "rarity": "Common"
+    },
+    {
+      "id": "10-162",
+      "field": "right_px",
+      "value": 83,
+      "mode": 60,
+      "setCode": "10",
+      "rarity": "Common"
+    },
+    {
+      "id": "10-179",
+      "field": "top_px_v2",
+      "value": 88,
+      "mode": 66,
+      "setCode": "10",
+      "rarity": "Common"
+    },
+    {
+      "id": "10-4",
+      "field": "left_px",
+      "value": 74,
+      "mode": 60,
+      "setCode": "10",
+      "rarity": "Common"
+    },
+    {
+      "id": "10-40",
+      "field": "top_px_v2",
+      "value": 99,
+      "mode": 66,
+      "setCode": "10",
+      "rarity": "Common"
+    },
+    {
+      "id": "10-41",
+      "field": "top_px_v2",
+      "value": 117,
+      "mode": 66,
+      "setCode": "10",
+      "rarity": "Common"
+    },
+    {
+      "id": "10-45",
+      "field": "top_px_v2",
+      "value": 104,
+      "mode": 66,
+      "setCode": "10",
+      "rarity": "Common"
+    },
+    {
+      "id": "10-61",
+      "field": "left_px",
+      "value": 88,
+      "mode": 60,
+      "setCode": "10",
+      "rarity": "Common"
+    },
+    {
+      "id": "10-61",
+      "field": "right_px",
+      "value": 115,
+      "mode": 60,
+      "setCode": "10",
+      "rarity": "Common"
+    },
+    {
+      "id": "10-61",
+      "field": "top_px_v2",
+      "value": 115,
+      "mode": 66,
+      "setCode": "10",
+      "rarity": "Common"
+    },
+    {
+      "id": "10-65",
+      "field": "top_px_v2",
+      "value": 75,
+      "mode": 66,
+      "setCode": "10",
+      "rarity": "Common"
+    },
+    {
+      "id": "10-7",
+      "field": "left_px",
+      "value": 139,
+      "mode": 60,
+      "setCode": "10",
+      "rarity": "Common"
+    },
+    {
+      "id": "10-7",
+      "field": "right_px",
+      "value": 78,
+      "mode": 60,
+      "setCode": "10",
+      "rarity": "Common"
+    },
+    {
+      "id": "10-7",
+      "field": "top_px_v2",
+      "value": 107,
+      "mode": 66,
+      "setCode": "10",
+      "rarity": "Common"
+    },
+    {
+      "id": "10-70",
+      "field": "top_px_v2",
+      "value": 81,
+      "mode": 66,
+      "setCode": "10",
+      "rarity": "Common"
+    },
+    {
+      "id": "10-73",
+      "field": "top_px_v2",
+      "value": 179,
+      "mode": 66,
+      "setCode": "10",
+      "rarity": "Common"
+    },
+    {
+      "id": "10-75",
+      "field": "top_px_v2",
+      "value": 110,
+      "mode": 66,
+      "setCode": "10",
+      "rarity": "Common"
+    },
+    {
+      "id": "10-90",
+      "field": "left_px",
+      "value": 156,
+      "mode": 60,
+      "setCode": "10",
+      "rarity": "Common"
+    },
+    {
+      "id": "10-111",
+      "field": "top_px_v2",
+      "value": 116,
+      "mode": 66,
+      "setCode": "10",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "10-137",
+      "field": "right_px",
+      "value": 93,
+      "mode": 60,
+      "setCode": "10",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "10-15",
+      "field": "top_px_v2",
+      "value": 187,
+      "mode": 66,
+      "setCode": "10",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "10-152",
+      "field": "top_px_v2",
+      "value": 99,
+      "mode": 66,
+      "setCode": "10",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "10-163",
+      "field": "left_px",
+      "value": 90,
+      "mode": 60,
+      "setCode": "10",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "10-164",
+      "field": "top_px_v2",
+      "value": 71,
+      "mode": 66,
+      "setCode": "10",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "10-183",
+      "field": "top_px_v2",
+      "value": 83,
+      "mode": 66,
+      "setCode": "10",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "10-184",
+      "field": "top_px_v2",
+      "value": 134,
+      "mode": 66,
+      "setCode": "10",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "10-190",
+      "field": "top_px_v2",
+      "value": 71,
+      "mode": 66,
+      "setCode": "10",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "10-27",
+      "field": "top_px_v2",
+      "value": 130,
+      "mode": 66,
+      "setCode": "10",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "10-64",
+      "field": "right_px",
+      "value": 167,
+      "mode": 60,
+      "setCode": "10",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "10-80",
+      "field": "top_px_v2",
+      "value": 84,
+      "mode": 66,
+      "setCode": "10",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "10-82",
+      "field": "top_px_v2",
+      "value": 134,
+      "mode": 66,
+      "setCode": "10",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "10-116",
+      "field": "right_px",
+      "value": 91,
+      "mode": 60,
+      "setCode": "10",
+      "rarity": "Super Rare"
+    },
+    {
+      "id": "10-24",
+      "field": "top_px_v2",
+      "value": 104,
+      "mode": 66,
+      "setCode": "10",
+      "rarity": "Super Rare"
+    },
+    {
+      "id": "10-3",
+      "field": "top_px_v2",
+      "value": 183,
+      "mode": 66,
+      "setCode": "10",
+      "rarity": "Legendary"
+    },
+    {
+      "id": "10-21-P3",
+      "field": "top_px_v2",
+      "value": 110,
+      "mode": 66,
+      "setCode": "10",
+      "rarity": "Special"
+    },
+    {
+      "id": "10-22-P3",
+      "field": "top_px_v2",
+      "value": 107,
+      "mode": 66,
+      "setCode": "10",
+      "rarity": "Special"
+    },
+    {
+      "id": "10-209",
+      "field": "left_px",
+      "value": 0,
+      "mode": 60,
+      "setCode": "10",
+      "rarity": "Epic"
+    },
+    {
+      "id": "10-209",
+      "field": "right_px",
+      "value": 45,
+      "mode": 60,
+      "setCode": "10",
+      "rarity": "Epic"
+    },
+    {
+      "id": "10-209",
+      "field": "top_px_v2",
+      "value": 104,
+      "mode": 66,
+      "setCode": "10",
+      "rarity": "Epic"
+    },
+    {
+      "id": "10-211",
+      "field": "left_px",
+      "value": 0,
+      "mode": 60,
+      "setCode": "10",
+      "rarity": "Epic"
+    },
+    {
+      "id": "10-211",
+      "field": "right_px",
+      "value": 0,
+      "mode": 60,
+      "setCode": "10",
+      "rarity": "Epic"
+    },
+    {
+      "id": "10-211",
+      "field": "top_px_v2",
+      "value": 168,
+      "mode": 66,
+      "setCode": "10",
+      "rarity": "Epic"
+    },
+    {
+      "id": "10-213",
+      "field": "left_px",
+      "value": 0,
+      "mode": 60,
+      "setCode": "10",
+      "rarity": "Epic"
+    },
+    {
+      "id": "10-213",
+      "field": "right_px",
+      "value": 55,
+      "mode": 60,
+      "setCode": "10",
+      "rarity": "Epic"
+    },
+    {
+      "id": "10-213",
+      "field": "top_px_v2",
+      "value": 0,
+      "mode": 66,
+      "setCode": "10",
+      "rarity": "Epic"
+    },
+    {
+      "id": "10-214",
+      "field": "left_px",
+      "value": 0,
+      "mode": 60,
+      "setCode": "10",
+      "rarity": "Epic"
+    },
+    {
+      "id": "10-214",
+      "field": "right_px",
+      "value": 0,
+      "mode": 60,
+      "setCode": "10",
+      "rarity": "Epic"
+    },
+    {
+      "id": "10-214",
+      "field": "top_px_v2",
+      "value": 192,
+      "mode": 66,
+      "setCode": "10",
+      "rarity": "Epic"
+    },
+    {
+      "id": "10-219",
+      "field": "left_px",
+      "value": 0,
+      "mode": 60,
+      "setCode": "10",
+      "rarity": "Epic"
+    },
+    {
+      "id": "10-219",
+      "field": "right_px",
+      "value": 0,
+      "mode": 60,
+      "setCode": "10",
+      "rarity": "Epic"
+    },
+    {
+      "id": "10-219",
+      "field": "top_px_v2",
+      "value": 88,
+      "mode": 66,
+      "setCode": "10",
+      "rarity": "Epic"
+    },
+    {
+      "id": "10-223",
+      "field": "left_px",
+      "value": 0,
+      "mode": 60,
+      "setCode": "10",
+      "rarity": "Enchanted"
+    },
+    {
+      "id": "10-223",
+      "field": "right_px",
+      "value": 0,
+      "mode": 60,
+      "setCode": "10",
+      "rarity": "Enchanted"
+    },
+    {
+      "id": "10-223",
+      "field": "top_px_v2",
+      "value": 3,
+      "mode": 66,
+      "setCode": "10",
+      "rarity": "Enchanted"
+    },
+    {
+      "id": "10-228",
+      "field": "left_px",
+      "value": 0,
+      "mode": 60,
+      "setCode": "10",
+      "rarity": "Enchanted"
+    },
+    {
+      "id": "10-228",
+      "field": "right_px",
+      "value": 0,
+      "mode": 60,
+      "setCode": "10",
+      "rarity": "Enchanted"
+    },
+    {
+      "id": "10-228",
+      "field": "top_px_v2",
+      "value": 96,
+      "mode": 66,
+      "setCode": "10",
+      "rarity": "Enchanted"
+    },
+    {
+      "id": "10-230",
+      "field": "left_px",
+      "value": 0,
+      "mode": 60,
+      "setCode": "10",
+      "rarity": "Enchanted"
+    },
+    {
+      "id": "10-230",
+      "field": "right_px",
+      "value": 0,
+      "mode": 60,
+      "setCode": "10",
+      "rarity": "Enchanted"
+    },
+    {
+      "id": "10-230",
+      "field": "top_px_v2",
+      "value": 128,
+      "mode": 66,
+      "setCode": "10",
+      "rarity": "Enchanted"
+    },
+    {
+      "id": "10-231",
+      "field": "left_px",
+      "value": 63,
+      "mode": 60,
+      "setCode": "10",
+      "rarity": "Enchanted"
+    },
+    {
+      "id": "10-231",
+      "field": "right_px",
+      "value": 34,
+      "mode": 60,
+      "setCode": "10",
+      "rarity": "Enchanted"
+    },
+    {
+      "id": "10-238",
+      "field": "left_px",
+      "value": 109,
+      "mode": 60,
+      "setCode": "10",
+      "rarity": "Enchanted"
+    },
+    {
+      "id": "10-238",
+      "field": "right_px",
+      "value": 324,
+      "mode": 60,
+      "setCode": "10",
+      "rarity": "Enchanted"
+    },
+    {
+      "id": "10-238",
+      "field": "top_px_v2",
+      "value": 58,
+      "mode": 66,
+      "setCode": "10",
+      "rarity": "Enchanted"
+    },
+    {
+      "id": "10-240",
+      "field": "left_px",
+      "value": 24,
+      "mode": 60,
+      "setCode": "10",
+      "rarity": "Enchanted"
+    },
+    {
+      "id": "10-240",
+      "field": "right_px",
+      "value": 0,
+      "mode": 60,
+      "setCode": "10",
+      "rarity": "Enchanted"
+    },
+    {
+      "id": "11-110",
+      "field": "top_px_v2",
+      "value": 152,
+      "mode": 66,
+      "setCode": "11",
+      "rarity": "Common"
+    },
+    {
+      "id": "11-151",
+      "field": "top_px_v2",
+      "value": 69,
+      "mode": 66,
+      "setCode": "11",
+      "rarity": "Common"
+    },
+    {
+      "id": "11-174",
+      "field": "top_px_v2",
+      "value": 77,
+      "mode": 66,
+      "setCode": "11",
+      "rarity": "Common"
+    },
+    {
+      "id": "11-177",
+      "field": "top_px_v2",
+      "value": 99,
+      "mode": 66,
+      "setCode": "11",
+      "rarity": "Common"
+    },
+    {
+      "id": "11-197",
+      "field": "top_px_v2",
+      "value": 76,
+      "mode": 66,
+      "setCode": "11",
+      "rarity": "Common"
+    },
+    {
+      "id": "11-30",
+      "field": "top_px_v2",
+      "value": 79,
+      "mode": 66,
+      "setCode": "11",
+      "rarity": "Common"
+    },
+    {
+      "id": "11-81",
+      "field": "top_px_v2",
+      "value": 148,
+      "mode": 66,
+      "setCode": "11",
+      "rarity": "Common"
+    },
+    {
+      "id": "11-112",
+      "field": "top_px_v2",
+      "value": 69,
+      "mode": 66,
+      "setCode": "11",
+      "rarity": "Rare"
+    },
+    {
+      "id": "11-116",
+      "field": "right_px",
+      "value": 183,
+      "mode": 60,
+      "setCode": "11",
+      "rarity": "Rare"
+    },
+    {
+      "id": "11-182",
+      "field": "top_px_v2",
+      "value": 98,
+      "mode": 66,
+      "setCode": "11",
+      "rarity": "Rare"
+    },
+    {
+      "id": "11-103",
+      "field": "top_px_v2",
+      "value": 63,
+      "mode": 66,
+      "setCode": "11",
+      "rarity": "Legendary"
+    },
+    {
+      "id": "11-13",
+      "field": "top_px_v2",
+      "value": 81,
+      "mode": 66,
+      "setCode": "11",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "11-187",
+      "field": "top_px_v2",
+      "value": 83,
+      "mode": 66,
+      "setCode": "11",
+      "rarity": "Super Rare"
+    },
+    {
+      "id": "12-53",
+      "field": "top_px_v2",
+      "value": 69,
+      "mode": 66,
+      "setCode": "12",
+      "rarity": "Common"
+    },
+    {
+      "id": "12-70",
+      "field": "top_px_v2",
+      "value": 162,
+      "mode": 66,
+      "setCode": "12",
+      "rarity": "Common"
+    },
+    {
+      "id": "12-73",
+      "field": "right_px",
+      "value": 63,
+      "mode": 60,
+      "setCode": "12",
+      "rarity": "Common"
+    },
+    {
+      "id": "12-75",
+      "field": "top_px_v2",
+      "value": 117,
+      "mode": 66,
+      "setCode": "12",
+      "rarity": "Common"
+    },
+    {
+      "id": "12-8",
+      "field": "top_px_v2",
+      "value": 88,
+      "mode": 66,
+      "setCode": "12",
+      "rarity": "Common"
+    },
+    {
+      "id": "12-96",
+      "field": "left_px",
+      "value": 96,
+      "mode": 60,
+      "setCode": "12",
+      "rarity": "Common"
+    },
+    {
+      "id": "12-132",
+      "field": "top_px_v2",
+      "value": 78,
+      "mode": 66,
+      "setCode": "12",
+      "rarity": "Rare"
+    },
+    {
+      "id": "12-21",
+      "field": "right_px",
+      "value": 175,
+      "mode": 60,
+      "setCode": "12",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "12-26",
+      "field": "left_px",
+      "value": 107,
+      "mode": 60,
+      "setCode": "12",
+      "rarity": "Super Rare"
+    },
+    {
+      "id": "12-127",
+      "field": "top_px_v2",
+      "value": 58,
+      "mode": 66,
+      "setCode": "12",
+      "rarity": "Legendary"
+    },
+    {
+      "id": "12-236",
+      "field": "left_px",
+      "value": 37,
+      "mode": 60,
+      "setCode": "12",
+      "rarity": "Enchanted"
+    },
+    {
+      "id": "12-236",
+      "field": "right_px",
+      "value": 38,
+      "mode": 60,
+      "setCode": "12",
+      "rarity": "Enchanted"
+    },
+    {
+      "id": "12-236",
+      "field": "top_px_v2",
+      "value": 16,
+      "mode": 66,
+      "setCode": "12",
+      "rarity": "Enchanted"
+    },
+    {
+      "id": "13-101",
+      "field": "top_px_v2",
+      "value": 113,
+      "mode": 66,
+      "setCode": "13",
+      "rarity": "Rare"
+    },
+    {
+      "id": "13-158",
+      "field": "top_px_v2",
+      "value": 70,
+      "mode": 66,
+      "setCode": "13",
+      "rarity": "Rare"
+    },
+    {
+      "id": "13-2",
+      "field": "top_px_v2",
+      "value": 88,
+      "mode": 66,
+      "setCode": "13",
+      "rarity": "Rare"
+    },
+    {
+      "id": "13-46",
+      "field": "right_px",
+      "value": 67,
+      "mode": 60,
+      "setCode": "13",
+      "rarity": "Rare"
+    },
+    {
+      "id": "13-10",
+      "field": "top_px_v2",
+      "value": 69,
+      "mode": 66,
+      "setCode": "13",
+      "rarity": "Common"
+    },
+    {
+      "id": "13-104",
+      "field": "top_px_v2",
+      "value": 122,
+      "mode": 66,
+      "setCode": "13",
+      "rarity": "Common"
+    },
+    {
+      "id": "13-115",
+      "field": "left_px",
+      "value": 76,
+      "mode": 60,
+      "setCode": "13",
+      "rarity": "Common"
+    },
+    {
+      "id": "13-149",
+      "field": "left_px",
+      "value": 159,
+      "mode": 60,
+      "setCode": "13",
+      "rarity": "Common"
+    },
+    {
+      "id": "13-149",
+      "field": "top_px_v2",
+      "value": 70,
+      "mode": 66,
+      "setCode": "13",
+      "rarity": "Common"
+    },
+    {
+      "id": "13-9",
+      "field": "left_px",
+      "value": 64,
+      "mode": 60,
+      "setCode": "13",
+      "rarity": "Common"
+    },
+    {
+      "id": "13-194",
+      "field": "top_px_v2",
+      "value": 63,
+      "mode": 66,
+      "setCode": "13",
+      "rarity": "Legendary"
+    },
+    {
+      "id": "13-22",
+      "field": "right_px",
+      "value": 76,
+      "mode": 60,
+      "setCode": "13",
+      "rarity": "Legendary"
+    },
+    {
+      "id": "13-99",
+      "field": "top_px_v2",
+      "value": 71,
+      "mode": 66,
+      "setCode": "13",
+      "rarity": "Legendary"
+    },
+    {
+      "id": "13-156",
+      "field": "top_px_v2",
+      "value": 69,
+      "mode": 66,
+      "setCode": "13",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "13-184",
+      "field": "left_px",
+      "value": 135,
+      "mode": 60,
+      "setCode": "13",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "13-56",
+      "field": "right_px",
+      "value": 79,
+      "mode": 60,
+      "setCode": "13",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "13-56",
+      "field": "top_px_v2",
+      "value": 77,
+      "mode": 66,
+      "setCode": "13",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "2-105",
+      "field": "left_px",
+      "value": 111,
+      "mode": 60,
+      "setCode": "2",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "2-119",
+      "field": "top_px_v2",
+      "value": 87,
+      "mode": 66,
+      "setCode": "2",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "2-131",
+      "field": "left_px",
+      "value": 127,
+      "mode": 60,
+      "setCode": "2",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "2-145",
+      "field": "top_px_v2",
+      "value": 83,
+      "mode": 66,
+      "setCode": "2",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "2-163",
+      "field": "left_px",
+      "value": 91,
+      "mode": 60,
+      "setCode": "2",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "2-163",
+      "field": "right_px",
+      "value": 159,
+      "mode": 60,
+      "setCode": "2",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "2-163",
+      "field": "top_px_v2",
+      "value": 126,
+      "mode": 66,
+      "setCode": "2",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "2-8",
+      "field": "top_px_v2",
+      "value": 92,
+      "mode": 66,
+      "setCode": "2",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "2-158",
+      "field": "top_px_v2",
+      "value": 86,
+      "mode": 66,
+      "setCode": "2",
+      "rarity": "Common"
+    },
+    {
+      "id": "2-165",
+      "field": "top_px_v2",
+      "value": 163,
+      "mode": 66,
+      "setCode": "2",
+      "rarity": "Common"
+    },
+    {
+      "id": "2-178",
+      "field": "top_px_v2",
+      "value": 107,
+      "mode": 66,
+      "setCode": "2",
+      "rarity": "Common"
+    },
+    {
+      "id": "2-28",
+      "field": "top_px_v2",
+      "value": 70,
+      "mode": 66,
+      "setCode": "2",
+      "rarity": "Common"
+    },
+    {
+      "id": "2-54",
+      "field": "left_px",
+      "value": 169,
+      "mode": 60,
+      "setCode": "2",
+      "rarity": "Common"
+    },
+    {
+      "id": "2-78",
+      "field": "top_px_v2",
+      "value": 112,
+      "mode": 66,
+      "setCode": "2",
+      "rarity": "Common"
+    },
+    {
+      "id": "2-83",
+      "field": "top_px_v2",
+      "value": 106,
+      "mode": 66,
+      "setCode": "2",
+      "rarity": "Common"
+    },
+    {
+      "id": "2-192",
+      "field": "top_px_v2",
+      "value": 83,
+      "mode": 66,
+      "setCode": "2",
+      "rarity": "Rare"
+    },
+    {
+      "id": "2-82",
+      "field": "left_px",
+      "value": 96,
+      "mode": 60,
+      "setCode": "2",
+      "rarity": "Rare"
+    },
+    {
+      "id": "2-96",
+      "field": "top_px_v2",
+      "value": 181,
+      "mode": 66,
+      "setCode": "2",
+      "rarity": "Rare"
+    },
+    {
+      "id": "2-177",
+      "field": "top_px_v2",
+      "value": 96,
+      "mode": 66,
+      "setCode": "2",
+      "rarity": "Super Rare"
+    },
+    {
+      "id": "2-26",
+      "field": "top_px_v2",
+      "value": 83,
+      "mode": 66,
+      "setCode": "2",
+      "rarity": "Super Rare"
+    },
+    {
+      "id": "2-35",
+      "field": "top_px_v2",
+      "value": 115,
+      "mode": 66,
+      "setCode": "2",
+      "rarity": "Super Rare"
+    },
+    {
+      "id": "2-33-P1",
+      "field": "right_px",
+      "value": 124,
+      "mode": 60,
+      "setCode": "2",
+      "rarity": "Special"
+    },
+    {
+      "id": "2-33-P1",
+      "field": "top_px_v2",
+      "value": 79,
+      "mode": 66,
+      "setCode": "2",
+      "rarity": "Special"
+    },
+    {
+      "id": "2-206",
+      "field": "left_px",
+      "value": 0,
+      "mode": 60,
+      "setCode": "2",
+      "rarity": "Enchanted"
+    },
+    {
+      "id": "2-206",
+      "field": "right_px",
+      "value": 0,
+      "mode": 60,
+      "setCode": "2",
+      "rarity": "Enchanted"
+    },
+    {
+      "id": "2-206",
+      "field": "top_px_v2",
+      "value": 0,
+      "mode": 66,
+      "setCode": "2",
+      "rarity": "Enchanted"
+    },
+    {
+      "id": "3-145",
+      "field": "top_px_v2",
+      "value": 136,
+      "mode": 66,
+      "setCode": "3",
+      "rarity": "Rare"
+    },
+    {
+      "id": "3-118",
+      "field": "top_px_v2",
+      "value": 120,
+      "mode": 66,
+      "setCode": "3",
+      "rarity": "Common"
+    },
+    {
+      "id": "3-149",
+      "field": "top_px_v2",
+      "value": 117,
+      "mode": 66,
+      "setCode": "3",
+      "rarity": "Common"
+    },
+    {
+      "id": "3-74",
+      "field": "top_px_v2",
+      "value": 95,
+      "mode": 66,
+      "setCode": "3",
+      "rarity": "Super Rare"
+    },
+    {
+      "id": "3-139",
+      "field": "top_px_v2",
+      "value": 70,
+      "mode": 66,
+      "setCode": "3",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "3-140",
+      "field": "top_px_v2",
+      "value": 96,
+      "mode": 66,
+      "setCode": "3",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "4-94",
+      "field": "left_px",
+      "value": 147,
+      "mode": 60,
+      "setCode": "4",
+      "rarity": "Common"
+    },
+    {
+      "id": "4-95",
+      "field": "left_px",
+      "value": 65,
+      "mode": 60,
+      "setCode": "4",
+      "rarity": "Rare"
+    },
+    {
+      "id": "4-206",
+      "field": "left_px",
+      "value": 117,
+      "mode": 60,
+      "setCode": "4",
+      "rarity": "Enchanted"
+    },
+    {
+      "id": "4-206",
+      "field": "right_px",
+      "value": 155,
+      "mode": 60,
+      "setCode": "4",
+      "rarity": "Enchanted"
+    },
+    {
+      "id": "4-206",
+      "field": "top_px_v2",
+      "value": 103,
+      "mode": 66,
+      "setCode": "4",
+      "rarity": "Enchanted"
+    },
+    {
+      "id": "4-207",
+      "field": "left_px",
+      "value": 0,
+      "mode": 60,
+      "setCode": "4",
+      "rarity": "Enchanted"
+    },
+    {
+      "id": "4-207",
+      "field": "right_px",
+      "value": 0,
+      "mode": 60,
+      "setCode": "4",
+      "rarity": "Enchanted"
+    },
+    {
+      "id": "4-207",
+      "field": "top_px_v2",
+      "value": 0,
+      "mode": 66,
+      "setCode": "4",
+      "rarity": "Enchanted"
+    },
+    {
+      "id": "4-214",
+      "field": "left_px",
+      "value": 0,
+      "mode": 60,
+      "setCode": "4",
+      "rarity": "Enchanted"
+    },
+    {
+      "id": "4-214",
+      "field": "right_px",
+      "value": 20,
+      "mode": 60,
+      "setCode": "4",
+      "rarity": "Enchanted"
+    },
+    {
+      "id": "4-214",
+      "field": "top_px_v2",
+      "value": 127,
+      "mode": 66,
+      "setCode": "4",
+      "rarity": "Enchanted"
+    },
+    {
+      "id": "5-104",
+      "field": "top_px_v2",
+      "value": 69,
+      "mode": 66,
+      "setCode": "5",
+      "rarity": "Rare"
+    },
+    {
+      "id": "5-129",
+      "field": "top_px_v2",
+      "value": 102,
+      "mode": 66,
+      "setCode": "5",
+      "rarity": "Rare"
+    },
+    {
+      "id": "5-27",
+      "field": "right_px",
+      "value": 76,
+      "mode": 60,
+      "setCode": "5",
+      "rarity": "Rare"
+    },
+    {
+      "id": "5-127",
+      "field": "top_px_v2",
+      "value": 123,
+      "mode": 66,
+      "setCode": "5",
+      "rarity": "Common"
+    },
+    {
+      "id": "5-180",
+      "field": "top_px_v2",
+      "value": 88,
+      "mode": 66,
+      "setCode": "5",
+      "rarity": "Common"
+    },
+    {
+      "id": "5-181",
+      "field": "top_px_v2",
+      "value": 126,
+      "mode": 66,
+      "setCode": "5",
+      "rarity": "Common"
+    },
+    {
+      "id": "5-4",
+      "field": "top_px_v2",
+      "value": 126,
+      "mode": 66,
+      "setCode": "5",
+      "rarity": "Common"
+    },
+    {
+      "id": "5-62",
+      "field": "top_px_v2",
+      "value": 69,
+      "mode": 66,
+      "setCode": "5",
+      "rarity": "Common"
+    },
+    {
+      "id": "5-163",
+      "field": "top_px_v2",
+      "value": 94,
+      "mode": 66,
+      "setCode": "5",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "5-190",
+      "field": "top_px_v2",
+      "value": 106,
+      "mode": 66,
+      "setCode": "5",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "5-47",
+      "field": "top_px_v2",
+      "value": 85,
+      "mode": 66,
+      "setCode": "5",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "5-28",
+      "field": "top_px_v2",
+      "value": 69,
+      "mode": 66,
+      "setCode": "5",
+      "rarity": "Super Rare"
+    },
+    {
+      "id": "5-85",
+      "field": "top_px_v2",
+      "value": 96,
+      "mode": 66,
+      "setCode": "5",
+      "rarity": "Legendary"
+    },
+    {
+      "id": "6-186",
+      "field": "top_px_v2",
+      "value": 93,
+      "mode": 66,
+      "setCode": "6",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "6-128",
+      "field": "left_px",
+      "value": 143,
+      "mode": 60,
+      "setCode": "6",
+      "rarity": "Common"
+    },
+    {
+      "id": "6-128",
+      "field": "top_px_v2",
+      "value": 110,
+      "mode": 66,
+      "setCode": "6",
+      "rarity": "Common"
+    },
+    {
+      "id": "6-41",
+      "field": "top_px_v2",
+      "value": 150,
+      "mode": 66,
+      "setCode": "6",
+      "rarity": "Common"
+    },
+    {
+      "id": "6-42",
+      "field": "top_px_v2",
+      "value": 69,
+      "mode": 66,
+      "setCode": "6",
+      "rarity": "Common"
+    },
+    {
+      "id": "6-62",
+      "field": "left_px",
+      "value": 68,
+      "mode": 60,
+      "setCode": "6",
+      "rarity": "Common"
+    },
+    {
+      "id": "6-131",
+      "field": "top_px_v2",
+      "value": 124,
+      "mode": 66,
+      "setCode": "6",
+      "rarity": "Rare"
+    },
+    {
+      "id": "6-37",
+      "field": "top_px_v2",
+      "value": 158,
+      "mode": 66,
+      "setCode": "6",
+      "rarity": "Rare"
+    },
+    {
+      "id": "6-52",
+      "field": "left_px",
+      "value": 99,
+      "mode": 60,
+      "setCode": "6",
+      "rarity": "Rare"
+    },
+    {
+      "id": "6-52",
+      "field": "top_px_v2",
+      "value": 112,
+      "mode": 66,
+      "setCode": "6",
+      "rarity": "Rare"
+    },
+    {
+      "id": "6-70",
+      "field": "top_px_v2",
+      "value": 80,
+      "mode": 66,
+      "setCode": "6",
+      "rarity": "Rare"
+    },
+    {
+      "id": "6-125",
+      "field": "top_px_v2",
+      "value": 63,
+      "mode": 66,
+      "setCode": "6",
+      "rarity": "Legendary"
+    },
+    {
+      "id": "7-201",
+      "field": "top_px_v2",
+      "value": 139,
+      "mode": 66,
+      "setCode": "7",
+      "rarity": "Rare"
+    },
+    {
+      "id": "7-52",
+      "field": "top_px_v2",
+      "value": 69,
+      "mode": 66,
+      "setCode": "7",
+      "rarity": "Rare"
+    },
+    {
+      "id": "7-67",
+      "field": "top_px_v2",
+      "value": 160,
+      "mode": 66,
+      "setCode": "7",
+      "rarity": "Rare"
+    },
+    {
+      "id": "7-101",
+      "field": "top_px_v2",
+      "value": 69,
+      "mode": 66,
+      "setCode": "7",
+      "rarity": "Common"
+    },
+    {
+      "id": "7-171",
+      "field": "top_px_v2",
+      "value": 110,
+      "mode": 66,
+      "setCode": "7",
+      "rarity": "Common"
+    },
+    {
+      "id": "7-79",
+      "field": "top_px_v2",
+      "value": 165,
+      "mode": 66,
+      "setCode": "7",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "8-133",
+      "field": "top_px_v2",
+      "value": 116,
+      "mode": 66,
+      "setCode": "8",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "8-154",
+      "field": "top_px_v2",
+      "value": 181,
+      "mode": 66,
+      "setCode": "8",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "8-173",
+      "field": "top_px_v2",
+      "value": 72,
+      "mode": 66,
+      "setCode": "8",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "8-19",
+      "field": "top_px_v2",
+      "value": 152,
+      "mode": 66,
+      "setCode": "8",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "8-192",
+      "field": "top_px_v2",
+      "value": 93,
+      "mode": 66,
+      "setCode": "8",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "8-43",
+      "field": "top_px_v2",
+      "value": 84,
+      "mode": 66,
+      "setCode": "8",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "8-96",
+      "field": "top_px_v2",
+      "value": 83,
+      "mode": 66,
+      "setCode": "8",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "8-12",
+      "field": "right_px",
+      "value": 81,
+      "mode": 60,
+      "setCode": "8",
+      "rarity": "Common"
+    },
+    {
+      "id": "8-127",
+      "field": "top_px_v2",
+      "value": 69,
+      "mode": 66,
+      "setCode": "8",
+      "rarity": "Common"
+    },
+    {
+      "id": "8-130",
+      "field": "top_px_v2",
+      "value": 133,
+      "mode": 66,
+      "setCode": "8",
+      "rarity": "Common"
+    },
+    {
+      "id": "8-160",
+      "field": "top_px_v2",
+      "value": 69,
+      "mode": 66,
+      "setCode": "8",
+      "rarity": "Common"
+    },
+    {
+      "id": "8-85",
+      "field": "top_px_v2",
+      "value": 80,
+      "mode": 66,
+      "setCode": "8",
+      "rarity": "Common"
+    },
+    {
+      "id": "8-167",
+      "field": "top_px_v2",
+      "value": 74,
+      "mode": 66,
+      "setCode": "8",
+      "rarity": "Legendary"
+    },
+    {
+      "id": "8-223",
+      "field": "right_px",
+      "value": 49,
+      "mode": 60,
+      "setCode": "8",
+      "rarity": "Legendary"
+    },
+    {
+      "id": "8-102",
+      "field": "left_px",
+      "value": 118,
+      "mode": 60,
+      "setCode": "8",
+      "rarity": "Super Rare"
+    },
+    {
+      "id": "8-171",
+      "field": "top_px_v2",
+      "value": 118,
+      "mode": 66,
+      "setCode": "8",
+      "rarity": "Super Rare"
+    },
+    {
+      "id": "8-68",
+      "field": "top_px_v2",
+      "value": 134,
+      "mode": 66,
+      "setCode": "8",
+      "rarity": "Super Rare"
+    },
+    {
+      "id": "8-135",
+      "field": "top_px_v2",
+      "value": 86,
+      "mode": 66,
+      "setCode": "8",
+      "rarity": "Rare"
+    },
+    {
+      "id": "8-142",
+      "field": "top_px_v2",
+      "value": 182,
+      "mode": 66,
+      "setCode": "8",
+      "rarity": "Rare"
+    },
+    {
+      "id": "8-151",
+      "field": "top_px_v2",
+      "value": 70,
+      "mode": 66,
+      "setCode": "8",
+      "rarity": "Rare"
+    },
+    {
+      "id": "8-170",
+      "field": "top_px_v2",
+      "value": 111,
+      "mode": 66,
+      "setCode": "8",
+      "rarity": "Rare"
+    },
+    {
+      "id": "8-200",
+      "field": "top_px_v2",
+      "value": 88,
+      "mode": 66,
+      "setCode": "8",
+      "rarity": "Rare"
+    },
+    {
+      "id": "8-7",
+      "field": "top_px_v2",
+      "value": 69,
+      "mode": 66,
+      "setCode": "8",
+      "rarity": "Rare"
+    },
+    {
+      "id": "8-29-P2",
+      "field": "top_px_v2",
+      "value": 112,
+      "mode": 66,
+      "setCode": "8",
+      "rarity": "Special"
+    },
+    {
+      "id": "9-117",
+      "field": "top_px_v2",
+      "value": 70,
+      "mode": 66,
+      "setCode": "9",
+      "rarity": "Rare"
+    },
+    {
+      "id": "9-138",
+      "field": "top_px_v2",
+      "value": 136,
+      "mode": 66,
+      "setCode": "9",
+      "rarity": "Rare"
+    },
+    {
+      "id": "9-173",
+      "field": "right_px",
+      "value": 79,
+      "mode": 60,
+      "setCode": "9",
+      "rarity": "Rare"
+    },
+    {
+      "id": "9-195",
+      "field": "right_px",
+      "value": 70,
+      "mode": 60,
+      "setCode": "9",
+      "rarity": "Rare"
+    },
+    {
+      "id": "9-36",
+      "field": "top_px_v2",
+      "value": 160,
+      "mode": 66,
+      "setCode": "9",
+      "rarity": "Rare"
+    },
+    {
+      "id": "9-97",
+      "field": "left_px",
+      "value": 109,
+      "mode": 60,
+      "setCode": "9",
+      "rarity": "Rare"
+    },
+    {
+      "id": "9-1-P3",
+      "field": "top_px_v2",
+      "value": 136,
+      "mode": 66,
+      "setCode": "9",
+      "rarity": "Special"
+    },
+    {
+      "id": "9-11",
+      "field": "right_px",
+      "value": 65,
+      "mode": 60,
+      "setCode": "9",
+      "rarity": "Common"
+    },
+    {
+      "id": "9-123",
+      "field": "top_px_v2",
+      "value": 87,
+      "mode": 66,
+      "setCode": "9",
+      "rarity": "Common"
+    },
+    {
+      "id": "9-140",
+      "field": "top_px_v2",
+      "value": 137,
+      "mode": 66,
+      "setCode": "9",
+      "rarity": "Common"
+    },
+    {
+      "id": "9-147",
+      "field": "right_px",
+      "value": 83,
+      "mode": 60,
+      "setCode": "9",
+      "rarity": "Common"
+    },
+    {
+      "id": "9-83",
+      "field": "top_px_v2",
+      "value": 112,
+      "mode": 66,
+      "setCode": "9",
+      "rarity": "Common"
+    },
+    {
+      "id": "9-9",
+      "field": "top_px_v2",
+      "value": 200,
+      "mode": 66,
+      "setCode": "9",
+      "rarity": "Common"
+    },
+    {
+      "id": "9-98",
+      "field": "left_px",
+      "value": 187,
+      "mode": 60,
+      "setCode": "9",
+      "rarity": "Common"
+    },
+    {
+      "id": "9-98",
+      "field": "top_px_v2",
+      "value": 69,
+      "mode": 66,
+      "setCode": "9",
+      "rarity": "Common"
+    },
+    {
+      "id": "9-122",
+      "field": "left_px",
+      "value": 111,
+      "mode": 60,
+      "setCode": "9",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "9-129",
+      "field": "top_px_v2",
+      "value": 70,
+      "mode": 66,
+      "setCode": "9",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "9-139",
+      "field": "top_px_v2",
+      "value": 72,
+      "mode": 66,
+      "setCode": "9",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "9-164",
+      "field": "left_px",
+      "value": 171,
+      "mode": 60,
+      "setCode": "9",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "9-164",
+      "field": "right_px",
+      "value": 159,
+      "mode": 60,
+      "setCode": "9",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "9-164",
+      "field": "top_px_v2",
+      "value": 154,
+      "mode": 66,
+      "setCode": "9",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "9-202",
+      "field": "top_px_v2",
+      "value": 83,
+      "mode": 66,
+      "setCode": "9",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "9-46",
+      "field": "top_px_v2",
+      "value": 136,
+      "mode": 66,
+      "setCode": "9",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "9-57",
+      "field": "top_px_v2",
+      "value": 69,
+      "mode": 66,
+      "setCode": "9",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "9-94",
+      "field": "top_px_v2",
+      "value": 114,
+      "mode": 66,
+      "setCode": "9",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "9-151",
+      "field": "top_px_v2",
+      "value": 69,
+      "mode": 66,
+      "setCode": "9",
+      "rarity": "Legendary"
+    },
+    {
+      "id": "9-177",
+      "field": "left_px",
+      "value": 84,
+      "mode": 60,
+      "setCode": "9",
+      "rarity": "Legendary"
+    },
+    {
+      "id": "9-26",
+      "field": "top_px_v2",
+      "value": 52,
+      "mode": 66,
+      "setCode": "9",
+      "rarity": "Legendary"
+    }
+  ],
+  "outlier_cards_total_count": 252,
+  "verdict": {
+    "crop_is_constant_overall": "Mostly yes for the dominant character-frame bordered population; a small set of well-explained exceptions exist (Location card type frame, ~16 foil-tinted-border cards, Q1/Q2 promo-quest subset with a different fixed crop).",
+    "cost_hexagon_anchor_reliable": false,
+    "cost_hexagon_note": "The ink-cost hexagon shape/size is NOT a reliable pixel-perfect crop anchor: its apparent top edge varies by ~18px depending on per-card content (e.g. an inkwell/splash icon rendered above the hexagon for some cards), independent of rarity or set. Template matching (raw grayscale and gradient-based) also failed to generalize across cards (typical scores 0.4-0.5, frequently <0.5) because the hexagon interior (ink color fill + cost digit glyph) varies too much card-to-card. This anchor was abandoned in favor of the footer emblem and the black-frame edges/footer-band edge, which are geometry-only (not art-content) signals and matched far more consistently.",
+    "footer_emblem_y_bordered": "1899-1900 in 98.8% of high-confidence (score>0.6) matches (n=2660/2851 bordered cards scored above threshold)",
+    "footer_emblem_y_fullart": "1899-1900 in all high-confidence (score>0.55) matches (n=22 strict Special/foil template matches + many Epic/Legendary/Iconic full-art at ~0.68 score also at y=1899)",
+    "footer_black_band_top_bordered": "1907 (mode), 1906-1907 covers ~98% of clean-cornered bordered cards",
+    "bordered_border_left_right_top_px": "left mode=60, right mode=60, top mode=66 (top is NOT the ~33px-larger value the physical-card note anticipated; see caveat)",
+    "asymmetry_caveat": "The physical-card reference measurement (~1.4mm / ~33px more cropped at top than bottom, at 23.1px/mm) could not be directly cross-checked against a bottom-frame pixel measurement in this analysis, because the bottom of the card is occupied by the black rarity/footer band (by design) rather than card art, so a symmetric \"black frame\" bottom_px measurement analogous to left/right/top is not meaningful \u2014 bottom_px was intentionally skipped per the method. The footer black band TOP edge (1906-1907, i.e. ~141-142px up from the 2048px-tall canvas bottom) is the best available bottom-side anchor and it is extremely constant (std < 1.1px), which supports \"the crop is constant\" but does not by itself prove/disprove the specific 33px top/bottom asymmetry claim -- that would require knowing the true (uncropped) card bleed dimensions.",
+    "top_px_measurement_caveat": "top_px is measured as the first row (median across sampled columns) where pixel intensity exceeds black_level+30, scanning the top of the card. For roughly 6% of bordered character-frame cards, dark or busy artwork sits close enough to the top frame edge that this threshold approach overshoots the true border edge by tens to a couple hundred px (verified by manual per-column inspection, e.g. card 1-123 has a dark night-sky illustration starting right at the frame edge). This is a measurement-method limitation, not evidence of real crop variance -- left_px/right_px and the footer black-band-top and footer-emblem-y anchors are far more robust (>98-99 percent within 2px of mode) and are the primary evidence for crop-is-constant. top_px mode (66) still matches those more robust anchors' implied top position on the majority (~93 percent) of cards where the simple threshold method is not confounded by dark art.",
+    "raw_percard_csv": "/sessions/wizardly-lucid-bell/carddb/work/percard_fixed.csv"
+  }
+}

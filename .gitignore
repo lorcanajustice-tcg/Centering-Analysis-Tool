@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+
+# Analysis outputs (regenerated on every run)
+results/
+
+# Card image database - 940MB of renders; rebuild with card_db/fetch_images.py
+# (index.json and the anchor survey stay tracked)
+card_db/images/
+
+# Card imagery - photos and renders contain Disney/Ravensburger
+# copyrighted artwork and are NEVER distributed with this repo.
+# Renders are fetched on demand (runtime cache / card_db/fetch_images.py);
+# test-fixture photos are local-only and the tests skip without them.
+fixtures/*.HEIC
+fixtures/*.heic
+fixtures/*.jpg
+fixtures/*.jpeg
+fixtures/*.png
+examples/*.jpg
+examples/*.jpeg
+examples/*.png
+
+# OS cruft
+Thumbs.db
+.DS_Store
