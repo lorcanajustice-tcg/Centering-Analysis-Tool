@@ -80,12 +80,33 @@ def analyze_card(back_photo: Optional[str] = None,
         if (by_t and by_b and fy
                 and by_t.status == by_b.status == fy.status == "measured"):
             front_toward_top = -fy.value
-            back_toward_top = (by_t.value - by_b.value) / 2.0  # T/B not mirrored
+            # T/B does not mirror under the vertical-axis flip. The back
+            # frame is displaced TOWARD THE TOP when the top border is the
+            # smaller one: (B-T)/2 (sign fixed 2026-07-06; (T-B)/2 is the
+            # +y-down frame offset, i.e. toward the bottom).
+            back_toward_top = (by_b.value - by_t.value) / 2.0
             delta = front_toward_top - back_toward_top
-            res.registration_mm["y"] = Measurement(delta, "mm", Uncertainty(
-                statistical=math.sqrt(fy.uncertainty.statistical ** 2),
-                perspective=fy.uncertainty.perspective,
-                edge_definition=fy.uncertainty.edge_definition))
+            sig = Uncertainty(
+                statistical=math.sqrt(
+                    fy.uncertainty.statistical ** 2
+                    + (by_t.uncertainty.statistical ** 2
+                       + by_b.uncertainty.statistical ** 2) / 4.0),
+                perspective=math.sqrt(
+                    fy.uncertainty.perspective ** 2
+                    + (by_t.uncertainty.perspective ** 2
+                       + by_b.uncertainty.perspective ** 2) / 4.0),
+                edge_definition=math.sqrt(
+                    fy.uncertainty.edge_definition ** 2
+                    + (by_t.uncertainty.edge_definition ** 2
+                       + by_b.uncertainty.edge_definition ** 2) / 4.0))
+            res.registration_mm["y"] = Measurement(delta, "mm", sig)
+            if abs(delta) > 2.0 * sig.total:
+                res.qa.append(QAFlag(
+                    "REGISTRATION_DISCREPANCY",
+                    f"front and back disagree on the vertical cut position "
+                    f"by {delta:+.3f}mm (> 2 sigma); genuine front-back "
+                    "print registration reaches this level (scatter "
+                    "+-0.19mm), but check for curl or a mis-detected edge"))
         else:
             reasons = []
             for nm, m in (("back top", by_t), ("back bottom", by_b),
