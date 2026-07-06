@@ -85,9 +85,9 @@ class LorcanaRenderSource:
 
     def resolve(self, card_id: str) -> dict:
         cards = self._load()
-        m = re.fullmatch(r"(\d+)\s*/\s*(C?\d+\w*)", card_id.strip(),
-                         re.IGNORECASE)
-        if m and m.group(2).upper().startswith("C"):
+        m = re.fullmatch(r"(\d+)\s*/\s*([A-Za-z][A-Za-z0-9]*)",
+                         card_id.strip())
+        if m:
             num, grp = int(m.group(1)), m.group(2).upper()
             hits = [c for c in cards if c.get("number") == num
                     and (c.get("promoGrouping") or "").upper() == grp]
