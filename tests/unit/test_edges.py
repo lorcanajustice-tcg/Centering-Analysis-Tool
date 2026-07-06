@@ -153,3 +153,28 @@ def test_cut_scan_ignores_shadow_band_outside_cut():
                           win_out_mm=1.5, win_in_mm=1.5, plateau_mm=-1.0)
     assert diag.n_ok >= 20
     assert abs(float(np.mean(v)) - edge) < 0.9
+
+
+def test_step_scan_rejects_penumbra_crossings():
+    """Dark card on white paper, soft shadow over part of the edge: on
+    shadowed lines the 50% threshold sits inside the penumbra, well
+    outside the cut. Those lines must be excluded with a named reason;
+    clean lines must be unmoved (bit-identical acceptance)."""
+    W, H, edge = 800, 400, 350.6
+    xs = np.arange(W, dtype=np.float32)
+    ramp = np.clip((xs - (edge - 2.0)) / 4.0, 0, 1)
+    row = 230.0 - ramp * 195.0  # paper 230 -> card 35
+    img = np.tile(row, (H, 1))
+    # rows >= 200: paper falls 230 -> 120 across a 60px penumbra ending
+    # ~30px outside the card edge (hand/phone shadow)
+    pen = np.clip((xs - (edge - 90.0)) / 60.0, 0, 1) * 110.0
+    img[200:] = np.minimum(row, 230.0 - pen)[None, :]
+    img += RNG.normal(0, 2.0, (H, W)).astype(np.float32)
+    us = np.linspace(40, 360, 25)
+    u, v, diag = step_scan(img, "left", 350, us, 150, 150)
+    clean = [x for uu, x in zip(u, v) if uu < 195]
+    assert len(clean) >= 10
+    assert abs(float(np.mean(clean)) - edge) < 0.35
+    assert diag.reject_reasons.get("shadowed_outside_level", 0) >= 8
+    # anything accepted on shadowed rows must still be the true cut
+    assert all(abs(x - edge) < 1.0 for x in v)

@@ -40,6 +40,35 @@ _SIDES = ("left", "right", "top", "bottom")
 # axes only ever validated the x axis.
 
 
+def _render_span_violations(offsets_mm: dict, bounds: dict) -> dict:
+    """Physical-plausibility check of the fitted quad against the render.
+
+    The cut always lies OUTSIDE the render bounds (the render is cropped
+    inside trim, crop >= 0) and the left+right / top+bottom render-to-cut
+    totals are layout-locked render-crop constants plus the manufacture
+    cut size - independent of where the cut landed on this card. A fitted
+    edge dragged off the cut by a hard cast shadow or foil curl breaks
+    these bounds even when its fit statistics look clean (a cast shadow's
+    outer boundary is as sharp as a real cut and tonally continuous with
+    dark card art). Returns {axis: reason}; empty when plausible.
+    """
+    out = {}
+    s_lo, s_hi = bounds["side"]
+    for ax, (a, b) in (("x", ("left", "right")), ("y", ("top", "bottom"))):
+        oa = offsets_mm[f"{a}_outside_render"]
+        ob = offsets_mm[f"{b}_outside_render"]
+        t_lo, t_hi = bounds[f"{ax}_total"]
+        probs = [f"{n} edge sits {v:+.2f}mm outside the render bound "
+                 f"(plausible {s_lo:+.2f}..{s_hi:+.2f}mm)"
+                 for n, v in ((a, oa), (b, ob)) if not s_lo <= v <= s_hi]
+        if not t_lo <= oa + ob <= t_hi:
+            probs.append(f"{a}+{b} render-to-cut span {oa + ob:.2f}mm vs "
+                         f"layout-locked {t_lo:.2f}..{t_hi:.2f}mm")
+        if probs:
+            out[ax] = "; ".join(probs)
+    return out
+
+
 def analyze_borderless(photo: str | Path, card_id: str, game: GameSpec,
                        render_source=None, out_dir: Optional[str] = None,
                        n_scans: int = 50, make_overlay: bool = True
@@ -239,6 +268,19 @@ def analyze_borderless(photo: str | Path, card_id: str, game: GameSpec,
         "bottom_outside_render": round((y_b - Hr) / ppm_r, 3),
     }
 
+    # --- render-span physical plausibility gate ---
+    span_bad = {}
+    bounds = getattr(game, "render_span_bounds_mm", None)
+    if bounds:
+        span_bad = _render_span_violations(res.per_side_offsets_mm, bounds)
+        for ax, why in sorted(span_bad.items()):
+            qa.append(QAFlag(
+                "RENDER_SPAN_MISMATCH",
+                f"{why}; the fitted quad cannot be the physical cut on this "
+                f"axis (an edge scan latched onto a cast shadow, curl or "
+                f"glare) - refusing the {ax} print shift",
+                severity="warning"))
+
     # shift of print relative to card: positive x = print displaced toward
     # the RIGHT card edge (card centre left of print centre).
     # Raw values measure true_shift + render_crop_bias; subtract the
@@ -277,6 +319,10 @@ def analyze_borderless(photo: str | Path, card_id: str, game: GameSpec,
         "x": Measurement(shift_x, "mm", shift_unc("left", "right")),
         "y": Measurement(shift_y, "mm", shift_unc("top", "bottom")),
     }
+    for ax in span_bad:
+        res.shift_mm[ax] = Measurement.refused(
+            "mm", "physically implausible render-to-cut geometry: "
+            + span_bad[ax])
 
     # --- grading-style equivalent ratios (convention, not measurement) ---
     def equiv(axis, shift, total_margin):
@@ -296,8 +342,14 @@ def analyze_borderless(photo: str | Path, card_id: str, game: GameSpec,
         return Ratio(axis=axis, first_pct=100.0 * a / (a + b),
                      uncertainty_pts=unc)
 
-    res.equivalent_ratio_lr = equiv("LR", shift_x, game.equiv_margin_lr_mm)
-    res.equivalent_ratio_tb = equiv("TB", shift_y, game.equiv_margin_tb_mm)
+    res.equivalent_ratio_lr = (
+        Ratio.refused("LR", res.shift_mm["x"].refusal_reason)
+        if res.shift_mm["x"].status != "measured"
+        else equiv("LR", shift_x, game.equiv_margin_lr_mm))
+    res.equivalent_ratio_tb = (
+        Ratio.refused("TB", res.shift_mm["y"].refusal_reason)
+        if res.shift_mm["y"].status != "measured"
+        else equiv("TB", shift_y, game.equiv_margin_tb_mm))
 
     # --- overlay: fitted edges + render bounds projected into the photo ---
     if make_overlay:
@@ -310,8 +362,11 @@ def analyze_borderless(photo: str | Path, card_id: str, game: GameSpec,
         rect_p = G.transform_points(Hrp, rect)
         cv2.polylines(ov.img, [rect_p.astype(np.int32)], True, C_FRAME, ov.lw)
         sx, sy = res.shift_mm["x"], res.shift_mm["y"]
+
+        def _fmt(m):
+            return f"{m.value:+.2f}mm" if m.value is not None else "refused"
         ov.banner([
-            f"FRONT print shift: x {sx.value:+.2f}mm  y {sy.value:+.2f}mm",
+            f"FRONT print shift: x {_fmt(sx)}  y {_fmt(sy)}",
             f"(+x = print toward right edge, +y = toward bottom)",
             f"equiv L/R {res.equivalent_ratio_lr.display or 'refused'}  "
             f"T/B {res.equivalent_ratio_tb.display or 'refused'}",

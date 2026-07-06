@@ -44,6 +44,16 @@ LORCANA = GameSpec(
     # calibration/NOTES.md "2026-07-06 reshoot").
     render_crop_bias_mm={"x": 0.0, "y": -0.08},
     render_crop_bias_unc_mm={"x": 0.05, "y": 0.10},
+    # Render-span gate bounds. Empirical over the seven clean 2026-07-06
+    # white/kraft captures (five reshoot fronts + Gadget white/kraft +
+    # Ursula 3/D23): x totals 0.73-0.90mm, y totals 1.21-1.97mm, max
+    # clean single side 1.33mm; margins ~0.3mm. Motivating failure: a
+    # hard cast shadow hugging a dark full-art top edge fakes a sharp
+    # "cut" (IMG_6416: top edge measured +2.24mm outside the render,
+    # y-total 2.77mm) that per-line edge QA cannot distinguish locally.
+    render_span_bounds_mm={"x_total": (0.50, 1.15),
+                           "y_total": (1.05, 2.15),
+                           "side": (-0.10, 1.90)},
 )
 
 ALLCARDS_URL = "https://lorcanajson.org/files/current/en/allCards.json"
@@ -85,15 +95,20 @@ class LorcanaRenderSource:
 
     def resolve(self, card_id: str) -> dict:
         cards = self._load()
-        m = re.fullmatch(r"(\d+)\s*/\s*([A-Za-z][A-Za-z0-9]*)",
+        m = re.fullmatch(r"(\d+)([A-Za-z])?\s*/\s*([A-Za-z][A-Za-z0-9]*)",
                          card_id.strip())
         if m:
-            num, grp = int(m.group(1)), m.group(2).upper()
+            num, var, grp = int(m.group(1)), m.group(2), m.group(3).upper()
             hits = [c for c in cards if c.get("number") == num
-                    and (c.get("promoGrouping") or "").upper() == grp]
+                    and (c.get("promoGrouping") or "").upper() == grp
+                    and (var is None
+                         or (c.get("variant") or "").upper() == var.upper())]
             if len(hits) == 1:
                 return hits[0]
-            raise CardNotFound(f"{card_id}: {len(hits)} matches for promo lookup")
+            raise CardNotFound(
+                f"{card_id}: {len(hits)} matches for promo lookup"
+                + (f" (variants: {[c.get('fullIdentifier') for c in hits[:5]]})"
+                   if hits else ""))
         m = re.fullmatch(r"(\w+)\s*:\s*(\d+)", card_id.strip())
         if m:
             sc, num = m.group(1), int(m.group(2))

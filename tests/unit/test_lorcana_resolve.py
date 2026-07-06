@@ -11,13 +11,14 @@ import pytest
 from centering.games.lorcana import CardNotFound, LorcanaRenderSource
 
 
-def _card(number, grouping, set_code, name, version=None):
+def _card(number, grouping, set_code, name, version=None, variant=None):
     return {
         "number": number,
         "promoGrouping": grouping,
         "setCode": set_code,
         "name": name,
         "version": version,
+        "variant": variant,
         "fullIdentifier": f"{number}/{grouping or 'NNN'} - EN - {set_code}",
     }
 
@@ -29,6 +30,8 @@ CARDS = [
     _card(1, "PD1", "11", "Beast", "Snowfield Troublemaker"),
     _card(23, "D23", "1", "Mickey Mouse", "Happiest Friend"),
     _card(54, None, "1", "Rafiki", "Mysterious Sage"),
+    _card(24, "P2", "7", "Hiro Hamada", "Armor Designer", variant="A"),
+    _card(24, "P2", "7", "Hiro Hamada", "Armor Designer", variant="B"),
 ]
 
 
@@ -46,6 +49,8 @@ def src():
     ("1/PD1", "Beast"),
     ("23/D23", "Mickey Mouse"),
     ("54/p3", "Woody"),      # grouping is case-insensitive
+    ("24B/P2", "Hiro Hamada"),  # variant letter selects between A/B
+    ("24b/p2", "Hiro Hamada"),
     (" 54 / P3 ", "Woody"),  # whitespace tolerated
 ])
 def test_promo_grouping_lookup(src, cid, name):
@@ -64,6 +69,8 @@ def test_unique_name_lookup(src):
 @pytest.mark.parametrize("cid", [
     "54/204",           # number/total is not a lookup form
     "99/P3",            # no such promo number
+    "24/P2",            # ambiguous without the variant letter
+    "24C/P2",           # no such variant
     "Elsa",             # ambiguous: two printings in stub
     "Stitch",           # unknown name
 ])

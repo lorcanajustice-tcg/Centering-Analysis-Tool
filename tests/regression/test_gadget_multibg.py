@@ -127,13 +127,22 @@ def test_front_cross_background_consistency(fronts):
     assert dx <= 0.08
 
 
-def test_front_dark_refuses_with_aspect_flag(fronts):
-    """Directional-light dark-mat capture: gross aspect deviation must lead
-    to an honest refusal, never a silently biased shift."""
+def test_front_dark_refuses(fronts):
+    """Directional-light dark-mat capture: must refuse honestly, never
+    report a silently biased shift. The refusal mechanism is allowed to
+    vary: originally the gross-aspect gate; since the 2026-07-06
+    shadowed_outside_level scanner guard, contaminated scan lines are
+    rejected before the fit and the refusal usually comes from an
+    unmeasurable edge (fewer usable lines) or the render-span gate."""
     r = fronts["dark"]
     assert r.shift_mm["x"].status == "refused"
     assert r.shift_mm["y"].status == "refused"
-    assert "ASPECT_DEVIATION" in [f.code for f in r.qa]
+    reason = (r.shift_mm["x"].refusal_reason or "") \
+        + (r.shift_mm["y"].refusal_reason or "")
+    flags = [f.code for f in r.qa]
+    assert ("ASPECT_DEVIATION" in flags
+            or "RENDER_SPAN_MISMATCH" in flags
+            or "unmeasurable" in reason or "implausible" in reason)
     assert r.equivalent_ratio_lr.status == "refused"
 
 

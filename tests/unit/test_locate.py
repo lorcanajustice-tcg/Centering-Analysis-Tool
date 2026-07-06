@@ -51,3 +51,52 @@ def test_card_component_bbox_bright_card_on_dark_unchanged():
     x0, y0, x1, y1 = card_component_bbox(img)
     assert abs(x0 - 300) <= 6 and abs(x1 - 600) <= 6
     assert abs(y0 - 140) <= 6 and abs(y1 - 560) <= 6
+
+
+def _add_corner_shadow(img, x_at, depth):
+    """Soft shadow over the bottom-left: rows below y0, columns left of a
+    row-dependent boundary x_at(y), darkened by *depth."""
+    H, W = img.shape
+    out = img.copy()
+    for y in range(H):
+        xb = x_at(y)
+        if xb <= 0:
+            continue
+        xb = min(int(xb), W)
+        out[y, :xb] *= depth
+    return out
+
+
+def test_coarse_locate_survives_diagonal_shadow_boundary():
+    """A hand/phone shadow with a diagonal boundary contaminates a minority
+    of left-edge scan lines with scattered detections; the largest-cluster
+    consensus must still find the card edge (global MAD would explode)."""
+    img = synth_scene()
+    img = _add_corner_shadow(
+        img, lambda y: 0 if y < 380 else 60 + 0.8 * (y - 380), 0.75)
+    sides, ppm = coarse_locate(img, 63.5, 88.9)
+    assert sides["left"].status == "ok", sides["left"].reason
+    assert abs(sides["left"].pos - 300) < 4.0
+    assert sides["bottom"].status == "ok", sides["bottom"].reason
+    assert abs(sides["bottom"].pos - 560) < 4.0
+
+
+def test_coarse_locate_refuses_two_comparable_clusters():
+    """A dark band parallel to the card edge over half the scan lines
+    produces a second consistent cluster comparable to the true-edge
+    cluster - ambiguous, must refuse rather than guess."""
+    img = synth_scene()
+    img[:350, 130:180] = 60.0  # dark stripe left of the card, upper half
+    sides, ppm = coarse_locate(img, 63.5, 88.9)
+    assert sides["left"].status != "ok"
+
+
+def test_card_component_bbox_refuses_shadow_leak():
+    """A deep shadow connecting the card to the photo frame corner must
+    raise (frame-touching component) instead of returning a leaked bbox."""
+    import pytest
+    img = synth_scene()
+    img = _add_corner_shadow(
+        img, lambda y: 0 if y < 300 else 340, 0.35)
+    with pytest.raises(RuntimeError):
+        card_component_bbox(img)

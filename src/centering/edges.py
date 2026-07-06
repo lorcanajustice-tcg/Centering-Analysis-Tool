@@ -204,6 +204,21 @@ def step_scan(gray: np.ndarray, side: str, approx: float, scan_us: np.ndarray,
         if idx is None or idx == 0:
             diag.note_reject("no_crossing")
             continue
+        # Shadow-penumbra guard: the plateau just OUTSIDE an accepted
+        # crossing must sit at the background level. A soft shadow (or
+        # glare penumbra) between background and card shifts it toward
+        # the card level, and the 50% threshold then lands inside the
+        # penumbra - up to ~1.5mm outside the cut. Such lines are
+        # excluded honestly (the fit uses the clean span, or the side is
+        # refused when too few lines remain). Lines whose whole outside
+        # IS the shadow still measure: their `outer` level is the shadow
+        # and the crossing is the true cut. Accepted lines are
+        # bit-identical to the historical behaviour.
+        if idx >= 12:
+            near_out = float(np.median(prof[idx - 10:idx - 2]))
+            if abs(near_out - outer) > 0.35 * (inner - outer):
+                diag.note_reject("shadowed_outside_level")
+                continue
         p0, p1 = prof[idx - 1], prof[idx]
         if p1 <= p0:
             diag.note_reject("non_monotonic_at_edge")

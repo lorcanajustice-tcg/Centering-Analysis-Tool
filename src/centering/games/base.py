@@ -37,6 +37,13 @@ class GameSpec:
     # calibrated edge-definition uncertainties (px), fixture-derived
     edge_def_px: dict = field(default_factory=lambda: {
         "texture": 3.0, "step": 1.0, "frame_peak": 1.5})
+    # physical-plausibility bounds (mm) for the borderless render-span
+    # gate: {"x_total": (lo, hi), "y_total": (lo, hi), "side": (lo, hi)}.
+    # The cut always lies OUTSIDE the render (crop >= 0) and the per-axis
+    # render-to-cut totals are layout-locked constants; a fitted edge
+    # violating these cannot be the physical cut (cast shadow / curl /
+    # glare). None disables the gate (uncalibrated game).
+    render_span_bounds_mm: Optional[dict] = None
 
 
 class RenderSource(Protocol):
