@@ -14,6 +14,9 @@ this folder:
 | IMG_6341.HEIC / IMG_6342.HEIC | Elsa - Ice Maker 6/C2 front/back | test_elsa_front.py, test_elsa_back.py |
 | IMG_6330.HEIC / IMG_6331.HEIC | Simba - Pride Protector 8/C2 front/back | test_simba_card.py |
 | IMG_6344.HEIC / IMG_6345.HEIC | Elsa 6/C2 close-ups | (reference) |
+| IMG_6397.HEIC / IMG_6398.HEIC | Gadget Hackwrench 12:147 front/back, WHITE paper | test_gadget_multibg.py |
+| IMG_6399.HEIC / IMG_6400.HEIC | Gadget Hackwrench 12:147 front/back, dark mat (directional light - refusal cases) | test_gadget_multibg.py |
+| IMG_6401.HEIC / IMG_6402.HEIC | Gadget Hackwrench 12:147 front/back, kraft cardboard | test_gadget_multibg.py |
 
 Official card renders are never stored in the repo either: the analyzer
 downloads the render it needs at runtime into `~/.cache/centering`

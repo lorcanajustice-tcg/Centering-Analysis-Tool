@@ -19,6 +19,57 @@ from .uncertainty import border_stat_sigma_px, compose_ratio_uncertainty
 
 _SIDES = ("left", "right", "top", "bottom")
 
+# hybrid cross-check: displacement beyond which a shadow band is suspected
+# (the documented artifact displaces step/texture scans by ~0.5-0.7mm;
+# threshold sits well above the +-0.1mm accuracy target)
+SHADOW_BAND_MM = 0.25
+
+
+def _hybrid_cross_check(gray, side, line, us, ppm):
+    """Signed displacement (mm) of the hybrid cut detector vs the fitted
+    edge, positive INWARD (hybrid places the cut inside the primary
+    detection - the shadow-band signature). None when unavailable.
+
+    The window reaches 1.5mm inside the primary edge with the plateau
+    sampled at 1.5..1.0mm inside, so a cut dragged outward by up to ~1mm
+    is still caught with an uncontaminated interior plateau."""
+    try:
+        hu, hv, hd = E.cut_scan(gray, side, line.v_at, us, ppm,
+                                win_out_mm=1.5, win_in_mm=1.5,
+                                plateau_mm=-1.0)
+    except ValueError:
+        return None
+    if hd.n_ok < 15:
+        return None
+    orientation = "v" if side in ("left", "right") else "h"
+    hline = G.FittedLine.fit(orientation, hu, hv)
+    if hline.rms > 3.0:
+        return None
+    mid = float(np.median(us))
+    disp = (float(hline.v_at(mid)) - float(line.v_at(mid))) / ppm
+    inward = 1.0 if side in ("left", "top") else -1.0
+    return disp * inward
+
+
+def _shadow_band_qa(qa, gray, lines, rows, cols, ppm):
+    """Run the hybrid cross-check on every fitted edge; QA-flag sides whose
+    hybrid cut sits > SHADOW_BAND_MM from the primary scan. Cross-check
+    only: measurements are NOT altered (calibration reshoot pending)."""
+    for side, line in lines.items():
+        if line is None:
+            continue
+        us = rows if side in ("left", "right") else cols
+        d = _hybrid_cross_check(gray, side, line, us, ppm)
+        if d is not None and abs(d) > SHADOW_BAND_MM:
+            where = "inside" if d > 0 else "outside"
+            qa.append(QAFlag(
+                "SHADOW_BAND_SUSPECTED",
+                f"{side} edge: hybrid cut detector places the cut "
+                f"{abs(d):.2f}mm {where} the primary detection; a shadow "
+                "band or glare may be displacing the edge scan - distrust "
+                "this side and prefer a diffuse-light recapture",
+                severity="warning"))
+
 
 def _edge_report(name, method, us, vs, diag, flag_rms=1.5, min_pts=10):
     rep = EdgeFitReport(edge=name, method=method, n_points=diag.n_ok,
@@ -92,19 +143,36 @@ def analyze_back(photo: str | Path, game: GameSpec, out_dir: Optional[str] = Non
     cols = np.linspace(xs + 0.15 * (xe - xs), xs + 0.85 * (xe - xs), n_scans)
 
     # --- fine edge scans ---
-    lines, reports = {}, {}
+    lines, reports, methods = {}, {}, {}
     for side in _SIDES:
         if coarse[side].pos is None:
             rep = EdgeFitReport(edge=side, method="texture", status="refused",
                                 notes=[coarse[side].reason])
             lines[side], reports[side] = None, rep
+            methods[side] = "texture"
             res.edge_fits.append(rep)
             continue
         us = rows if side in ("left", "right") else cols
-        u_ok, v_ok, diag = E.texture_scan(
-            gray, side, coarse[side].pos, us,
-            search_out_px=6.0 * ppm0, search_in_px=3.0 * ppm0)
-        line, rep = _edge_report(side, "texture", u_ok, v_ok, diag)
+
+        def _fine(method, side=side, us=us):
+            fn = E.step_scan if method == "step" else E.texture_scan
+            return fn(gray, side, coarse[side].pos, us,
+                      search_out_px=6.0 * ppm0, search_in_px=3.0 * ppm0)
+
+        # prefer the scanner that established the coarse position; on
+        # smooth light backgrounds that is the brightness step. If the
+        # primary scanner yields no usable line (too few points OR an
+        # inconsistent fit), try the alternate scanner before refusing.
+        method = coarse[side].method or "texture"
+        u_ok, v_ok, diag = _fine(method)
+        line, rep = _edge_report(side, method, u_ok, v_ok, diag)
+        if line is None:
+            alt = "step" if method == "texture" else "texture"
+            u2, v2, d2 = _fine(alt)
+            line2, rep2 = _edge_report(side, alt, u2, v2, d2)
+            if line2 is not None:
+                line, rep, diag, method = line2, rep2, d2, alt
+        methods[side] = method
         if line is not None and line.bow_px and line.bow_px > 3.0:
             qa.append(QAFlag("CURL_SUSPECTED",
                              f"{side} edge bows {line.bow_px:.1f}px over its span; "
@@ -142,6 +210,9 @@ def analyze_back(photo: str | Path, game: GameSpec, out_dir: Optional[str] = Non
     else:
         ppm = ppm0
     inp.px_per_mm = ppm
+
+    # --- hybrid cut cross-check (shadow-band detection; QA only) ---
+    _shadow_band_qa(qa, gray, lines, rows, cols, ppm)
 
     # --- tilt / rectification ---
     Hmm = None
@@ -201,9 +272,10 @@ def analyze_back(photo: str | Path, game: GameSpec, out_dir: Optional[str] = Non
 
     # --- borders ---
     ed = game.edge_def_px
-    def_border_px = math.sqrt(ed["texture"] ** 2 + ed["frame_peak"] ** 2)
 
     def border(side) -> Measurement:
+        def_border_px = math.sqrt(
+            ed[methods.get(side, "texture")] ** 2 + ed["frame_peak"] ** 2)
         if lines[side] is None:
             return Measurement.refused(
                 "mm", f"{side} card edge unmeasurable: "

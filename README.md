@@ -59,16 +59,28 @@ Library API (all functions pure; results JSON-serializable via `.to_dict()`):
 
 ## Getting a good photo
 
-Dark, matte, uniformly lit background on all four sides; telephoto lens;
-card centred, filling 60-80% of the frame, never touching the frame edges;
-unsleeved; small tilt (<3°) is fine; avoid glare bands crossing the card
-edges; flatten foil curl.
+**Background: plain white paper is the best choice** for standard cards
+(black-bordered fronts and backs) - the edge detectors handle either
+polarity, and white gives the strongest, cleanest contrast. A dark matte
+mat also works; mid-tone backgrounds (e.g. kraft cardboard) are supported
+but give the detectors less to work with.
+
+**Light: diffuse and even, on all four sides.** Directional lamps are the
+main failure mode: they cast shadow bands along card edges that can shift
+an edge detection by 0.5-0.7mm (the analyzer cross-checks for this and
+flags `SHADOW_BAND_SUSPECTED`, refusing obviously broken geometry, but a
+clean capture beats a caught artifact).
+
+Also: telephoto lens; card centred, filling 60-80% of the frame, with at
+least 5% clearance between every card edge and the photo frame edge (lens
+distortion is not modelled near the frame); unsleeved; small tilt (<3°) is
+fine; flatten foil curl.
 
 If a shot has problems, the report says so via QA flags (e.g.
-`BACKGROUND_NONUNIFORM`, `INSUFFICIENT_MARGIN`, `RADIAL_DISTORTION_RISK`,
-`CURL_SUSPECTED`, `WEAK_RENDER_MATCH`). One caution flags can't catch:
-a perfect-fit sleeve edge can masquerade as the card edge (±0.3mm) -
-always shoot unsleeved.
+`BACKGROUND_NONUNIFORM`, `SHADOW_BAND_SUSPECTED`, `ASPECT_DEVIATION`,
+`RADIAL_DISTORTION_RISK`, `CURL_SUSPECTED`, `WEAK_RENDER_MATCH`). One
+caution flags can't catch: a perfect-fit sleeve edge can masquerade as the
+card edge (±0.3mm) - always shoot unsleeved.
 
 ## Card imagery & licensing
 

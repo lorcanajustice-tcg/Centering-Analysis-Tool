@@ -2,9 +2,12 @@
 
 Brightness segmentation is unreliable on dark backs and glare-lit mats, so the
 coarse pass reuses the texture scanner itself: full-span scans from each side
-of the frame on a sparse row/column grid. Sides that fail coarsely are either
-inferred from the opposite side (when scale is known) or reported failed with
-the scanner's reject reasons - which become the user-facing refusal text.
+of the frame on a sparse row/column grid. On smooth light backgrounds (white
+paper, gray desk) both the mat and the card border are texture-free, so each
+side falls back to the polarity-agnostic brightness step scanner. Sides that
+fail both are either inferred from the opposite side (when scale is known) or
+reported failed with the scanners' reject reasons - which become the
+user-facing refusal text.
 """
 from __future__ import annotations
 
@@ -13,7 +16,7 @@ from typing import Optional
 
 import numpy as np
 
-from .edges import texture_scan
+from .edges import step_scan, texture_scan
 
 
 @dataclass
@@ -23,6 +26,22 @@ class CoarseSide:
     n_ok: int = 0
     mad_px: float = 0.0
     reason: str = ""
+    method: str = ""       # texture | step (scanner that produced pos)
+
+
+def _consensus(method: str, vs, diag, n_lines: int, mad_limit: float):
+    """Median/MAD consensus over one scanner's coarse detections.
+
+    Returns (CoarseSide|None, mad_or_None): the side when consistent, else
+    None plus the offending spread (None when there were too few points).
+    """
+    if diag.n_ok < max(6, n_lines // 3):
+        return None, None
+    med = float(np.median(vs))
+    mad = float(np.median(np.abs(vs - med)))
+    if mad > mad_limit:
+        return None, mad
+    return CoarseSide("ok", med, diag.n_ok, mad, method=method), mad
 
 
 def coarse_locate(gray: np.ndarray, card_w_mm: float, card_h_mm: float,
@@ -39,24 +58,34 @@ def coarse_locate(gray: np.ndarray, card_w_mm: float, card_h_mm: float,
     }
     sides: dict[str, CoarseSide] = {}
     for side, (approx, so, si, us) in cfg.items():
-        _, vs, diag = texture_scan(gray, side, approx, us, so, si,
-                                   sustain=30, min_sep=4.0)
-        if diag.n_ok >= max(6, n_lines // 3):
-            med = float(np.median(vs))
-            mad = float(np.median(np.abs(vs - med)))
-            if mad <= mad_limit:
-                sides[side] = CoarseSide("ok", med, diag.n_ok, mad)
-                continue
+        _, vs_t, diag_t = texture_scan(gray, side, approx, us, so, si,
+                                       sustain=30, min_sep=4.0)
+        cs, mad_t = _consensus("texture", vs_t, diag_t, n_lines, mad_limit)
+        mad_s = None
+        if cs is None:
+            # smooth light background: no texture signal on either side of
+            # the edge; the polarity-agnostic brightness step still works
+            _, vs_s, diag_s = step_scan(gray, side, approx, us, so, si,
+                                        band=5, min_contrast=25.0)
+            cs, mad_s = _consensus("step", vs_s, diag_s, n_lines, mad_limit)
+        if cs is not None:
+            sides[side] = cs
+            continue
+        spreads = [m for m in (mad_t, mad_s) if m is not None]
+        if spreads:
             sides[side] = CoarseSide(
-                "failed", None, diag.n_ok, mad,
-                f"inconsistent coarse edge detections (spread {mad:.0f}px); "
-                "likely glare bands or background texture non-uniformity")
+                "failed", None, max(diag_t.n_ok, diag_s.n_ok), min(spreads),
+                f"inconsistent coarse edge detections (spread "
+                f"{min(spreads):.0f}px); likely glare bands or background "
+                "texture non-uniformity")
         else:
             sides[side] = CoarseSide(
-                "failed", None, diag.n_ok, 0.0,
-                f"insufficient texture contrast between background and card "
-                f"({diag.n_ok}/{diag.n_attempted} coarse lines usable; "
-                f"{diag.summary()})")
+                "failed", None, diag_t.n_ok, 0.0,
+                f"insufficient texture/brightness contrast between background "
+                f"and card (texture: {diag_t.n_ok}/{diag_t.n_attempted} "
+                f"coarse lines usable, {diag_t.summary()}; step: "
+                f"{diag_s.n_ok}/{diag_s.n_attempted} usable, "
+                f"{diag_s.summary()})")
 
     ppm = None
     if sides["left"].status == "ok" and sides["right"].status == "ok":
@@ -87,9 +116,14 @@ def background_uniformity(gray: np.ndarray, patch: int = 220) -> dict:
     }
 
 
-def bright_component_bbox(gray: np.ndarray):
-    """Bright-card bbox via centre-vs-frame-ring adaptive threshold (used for
-    borderless fronts, where the card is the bright object)."""
+def card_component_bbox(gray: np.ndarray):
+    """Card bbox via centre-vs-frame-ring adaptive threshold.
+
+    Polarity-agnostic: the card may be the bright object on a dark mat or
+    the dark object on a light background (frame ring assumed to be mat).
+    On the historical bright-on-dark path the behaviour is unchanged; on
+    the dark-card path a morphological CLOSE first fills bright artwork
+    holes so the fill-ratio gate still sees a solid card."""
     import cv2
     H, W = gray.shape
     c = gray[int(H * .40):int(H * .60), int(W * .40):int(W * .60)]
@@ -97,12 +131,17 @@ def bright_component_bbox(gray: np.ndarray):
                            gray[-int(H * .03):].ravel(),
                            gray[:, :int(W * .03)].ravel(),
                            gray[:, -int(W * .03):].ravel()])
-    thr = 0.5 * (float(np.median(c)) + float(np.median(ring)))
-    th = (cv2.GaussianBlur(gray, (9, 9), 0) > thr).astype(np.uint8)
+    c_med, r_med = float(np.median(c)), float(np.median(ring))
+    thr = 0.5 * (c_med + r_med)
+    blur = cv2.GaussianBlur(gray, (9, 9), 0)
+    bright_card = c_med >= r_med
+    th = ((blur > thr) if bright_card else (blur < thr)).astype(np.uint8)
+    if not bright_card:
+        th = cv2.morphologyEx(th, cv2.MORPH_CLOSE, np.ones((25, 25), np.uint8))
     th = cv2.morphologyEx(th, cv2.MORPH_OPEN, np.ones((25, 25), np.uint8))
     n, labels, stats, _ = cv2.connectedComponentsWithStats(th)
     if n < 2:
-        raise RuntimeError("no bright component found")
+        raise RuntimeError("no card-candidate component found")
     best, score = None, -1.0
     for i in range(1, n):
         x, y, w, h, a = stats[i]
@@ -112,5 +151,10 @@ def bright_component_bbox(gray: np.ndarray):
         if a > score:
             best, score = (int(x), int(y), int(x + w), int(y + h)), a
     if best is None:
-        raise RuntimeError("no plausible card-shaped bright component")
+        raise RuntimeError("no plausible card-shaped component "
+                           f"(centre {c_med:.0f} vs ring {r_med:.0f})")
     return best
+
+
+# backwards-compatible alias (now polarity-agnostic)
+bright_component_bbox = card_component_bbox

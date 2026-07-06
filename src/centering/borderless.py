@@ -21,10 +21,10 @@ import numpy as np
 
 from . import edges as E
 from . import geometry as G
-from .back import _edge_report
+from .back import _edge_report, _shadow_band_qa
 from .games.base import GameSpec
 from .imgio import load_photo
-from .locate import background_uniformity, bright_component_bbox
+from .locate import background_uniformity, card_component_bbox, coarse_locate
 from .overlay import C_EDGE, C_FRAME, Overlay
 from .types import (BorderlessResult, EdgeFitReport, Measurement, QAFlag,
                     Ratio, RenderMatchReport, TiltReport, Uncertainty)
@@ -54,9 +54,22 @@ def analyze_borderless(photo: str | Path, card_id: str, game: GameSpec,
         from .games.lorcana import LorcanaRenderSource
         render_source = LorcanaRenderSource()
 
-    # --- coarse localization: the card IS the bright component ---
-    bbox = bright_component_bbox(gray)
-    x0, y0, x1, y1 = bbox
+    # --- coarse localization: the card is the odd-one-out component
+    # (bright on a dark mat, or dark/bordered on a light background); when
+    # segmentation is ambiguous (e.g. mid-tone artwork on a similar-toned
+    # background) fall back to per-side coarse scans ---
+    try:
+        x0, y0, x1, y1 = card_component_bbox(gray)
+    except RuntimeError as err:
+        coarse, _ = coarse_locate(gray, game.card_w_mm, game.card_h_mm)
+        bad = [s for s in _SIDES if coarse[s].pos is None]
+        if bad:
+            raise RuntimeError(
+                f"card could not be localized: component segmentation failed "
+                f"({err}); per-side coarse scans failed for "
+                + "; ".join(f"{s}: {coarse[s].reason}" for s in bad)) from err
+        x0, y0 = int(coarse["left"].pos), int(coarse["top"].pos)
+        x1, y1 = int(coarse["right"].pos), int(coarse["bottom"].pos)
     ppm0 = (x1 - x0) / game.card_w_mm
 
     corners_bg = background_uniformity(gray)
@@ -71,13 +84,25 @@ def analyze_borderless(photo: str | Path, card_id: str, game: GameSpec,
     rows = np.linspace(y0 + 0.15 * (y1 - y0), y0 + 0.85 * (y1 - y0), n_scans)
     cols = np.linspace(x0 + 0.15 * (x1 - x0), x0 + 0.85 * (x1 - x0), n_scans)
     approx = {"left": x0, "right": x1, "top": y0, "bottom": y1}
-    lines, reports = {}, {}
+    lines, reports, methods = {}, {}, {}
     for side in _SIDES:
         us = rows if side in ("left", "right") else cols
         u_ok, v_ok, diag = E.step_scan(
             gray, side, approx[side], us,
             search_out_px=2.5 * ppm0, search_in_px=2.5 * ppm0)
         line, rep = _edge_report(side, "step", u_ok, v_ok, diag)
+        methods[side] = "step"
+        if line is None:
+            # black border on a dark textured mat has no brightness step,
+            # but the texture transition still marks the cut (the same
+            # signal the back pipeline uses on dark mats)
+            u2, v2, d2 = E.texture_scan(
+                gray, side, approx[side], us,
+                search_out_px=2.5 * ppm0, search_in_px=2.5 * ppm0)
+            line2, rep2 = _edge_report(side, "texture", u2, v2, d2)
+            if line2 is not None:
+                line, rep, diag = line2, rep2, d2
+                methods[side] = "texture"
         if line is not None and line.bow_px and line.bow_px > 3.0:
             qa.append(QAFlag("CURL_SUSPECTED",
                              f"{side} edge bows {line.bow_px:.1f}px over its "
@@ -106,10 +131,17 @@ def analyze_borderless(photo: str | Path, card_id: str, game: GameSpec,
     missing = [s for s in _SIDES if lines[s] is None]
     if missing:
         for ax, (a, b) in {"x": ("left", "right"), "y": ("top", "bottom")}.items():
-            res.shift_mm[ax] = Measurement.refused(
-                "mm", "; ".join(
-                    f"{s} edge unmeasurable: {'; '.join(reports[s].notes)}"
-                    for s in (a, b) if lines[s] is None))
+            bad = [s for s in (a, b) if lines[s] is None]
+            if bad:
+                res.shift_mm[ax] = Measurement.refused(
+                    "mm", "; ".join(
+                        f"{s} edge unmeasurable: "
+                        f"{'; '.join(reports[s].notes)}" for s in bad))
+            else:
+                res.shift_mm[ax] = Measurement.refused(
+                    "mm", f"{a}/{b} edges measured, but render alignment "
+                    "requires the full physical quad "
+                    f"({', '.join(missing)} unmeasurable)")
         res.equivalent_ratio_lr = Ratio.refused("LR", "physical edges incomplete")
         res.equivalent_ratio_tb = Ratio.refused("TB", "physical edges incomplete")
         res.tilt.corrected = False
@@ -135,9 +167,34 @@ def analyze_borderless(photo: str | Path, card_id: str, game: GameSpec,
     hl = float(np.linalg.norm(quad[3] - quad[0]))
     hr = float(np.linalg.norm(quad[2] - quad[1]))
     res.aspect_ratio_measured = (hl + hr) / (wt + wb)
+    nominal_aspect = game.card_h_mm / game.card_w_mm
+    aspect_dev = abs(res.aspect_ratio_measured - nominal_aspect) / nominal_aspect
+    if aspect_dev > 0.012:
+        qa.append(QAFlag("ASPECT_DEVIATION",
+                         f"measured H/W {res.aspect_ratio_measured:.4f} vs "
+                         f"nominal {nominal_aspect:.4f}; check for sleeve, "
+                         "curl or a mis-detected edge"))
     width_px = lines["right"].v_at(rows) - lines["left"].v_at(rows)
     inp.px_per_mm = float(np.median(width_px)) / game.card_w_mm
     wvar = float((width_px.max() - width_px.min()) / width_px.mean())
+
+    # --- aspect sanity gate: a grossly non-card-shaped quad means at least
+    # one edge latched onto glare/shadow/artwork; any shift computed from it
+    # would be silently wrong, so refuse rather than estimate ---
+    if aspect_dev > 0.03:
+        reason = (f"measured quad H/W {res.aspect_ratio_measured:.4f} deviates "
+                  f"{aspect_dev * 100:.1f}% from nominal {nominal_aspect:.4f}; "
+                  "at least one edge is grossly mis-detected (glare band, "
+                  "shadow or artwork boundary); refusing rather than "
+                  "reporting a biased print shift")
+        res.shift_mm = {"x": Measurement.refused("mm", reason),
+                        "y": Measurement.refused("mm", reason)}
+        res.equivalent_ratio_lr = Ratio.refused("LR", reason)
+        res.equivalent_ratio_tb = Ratio.refused("TB", reason)
+        return res
+
+    # --- hybrid cut cross-check (shadow-band detection; QA only) ---
+    _shadow_band_qa(qa, gray, lines, rows, cols, inp.px_per_mm)
 
     # --- render match ---
     render_gray, render_rgb, url, card = render_source.get_render(card_id)
@@ -208,7 +265,9 @@ def analyze_borderless(photo: str | Path, card_id: str, game: GameSpec,
         align = med_err / math.sqrt(max(n_inl, 1)) * 3.0  # conservative
         stat = math.sqrt(stat_edges_r ** 2 + align ** 2) / ppm_r
         persp = abs(shift_x if a_side == "left" else shift_y) * wvar / 2.0 + 0.005
-        ed = game.edge_def_px["step"] * math.sqrt(2) / 2.0 / inp.px_per_mm
+        ed_a = game.edge_def_px[methods.get(a_side, "step")]
+        ed_b = game.edge_def_px[methods.get(b_side, "step")]
+        ed = math.sqrt(ed_a ** 2 + ed_b ** 2) / 2.0 / inp.px_per_mm
         b_unc = bias_unc["x" if a_side == "left" else "y"]
         edge_def = math.sqrt(ed ** 2 + b_unc ** 2)
         return Uncertainty(statistical=stat, perspective=persp,
