@@ -1,0 +1,113 @@
+{
+ "gadget": {
+  "back_ok": true,
+  "back_borders": {
+   "left": 2.306,
+   "right": 2.464,
+   "top": 2.123,
+   "bottom": 2.279
+  },
+  "back_sx": -0.0793,
+  "back_sy": -0.078,
+  "back_lr_total": 4.77,
+  "back_tb_total": 4.402,
+  "back_qa": [
+   "PARTIAL_EDGE_SPAN"
+  ],
+  "front_ok": true,
+  "front_raw_x": -0.1228,
+  "front_raw_y": 0.0621,
+  "front_unc_y": 0.201,
+  "inliers": 1160,
+  "aspect": 1.4032,
+  "front_qa": []
+ },
+ "julieta": {
+  "back_ok": true,
+  "back_borders": {
+   "left": 2.271,
+   "right": 2.531,
+   "top": 2.261,
+   "bottom": 2.078
+  },
+  "back_sx": -0.1301,
+  "back_sy": 0.0915,
+  "back_lr_total": 4.802,
+  "back_tb_total": 4.339,
+  "back_qa": [
+   "PARTIAL_EDGE_SPAN"
+  ],
+  "front_ok": true,
+  "front_raw_x": -0.2962,
+  "front_raw_y": -0.0376,
+  "front_unc_y": 0.201,
+  "inliers": 1356,
+  "aspect": 1.403,
+  "front_qa": []
+ },
+ "dplan": {
+  "back_ok": true,
+  "back_borders": {
+   "left": 2.327,
+   "right": 2.454,
+   "top": 1.84,
+   "bottom": 2.465
+  },
+  "back_sx": -0.0638,
+  "back_sy": -0.3122,
+  "back_lr_total": 4.781,
+  "back_tb_total": 4.305,
+  "back_qa": [],
+  "front_ok": true,
+  "front_raw_x": -0.0069,
+  "front_raw_y": -0.4859,
+  "front_unc_y": 0.201,
+  "inliers": 832,
+  "aspect": 1.4032,
+  "front_qa": []
+ },
+ "sabotage": {
+  "back_ok": true,
+  "back_borders": {
+   "left": 2.35,
+   "right": 2.417,
+   "top": 1.803,
+   "bottom": 2.488
+  },
+  "back_sx": -0.0332,
+  "back_sy": -0.3426,
+  "back_lr_total": 4.767,
+  "back_tb_total": 4.291,
+  "back_qa": [],
+  "front_ok": true,
+  "front_raw_x": 0.0045,
+  "front_raw_y": -0.319,
+  "front_unc_y": 0.201,
+  "inliers": 921,
+  "aspect": 1.3998,
+  "front_qa": []
+ },
+ "woody": {
+  "back_ok": true,
+  "back_borders": {
+   "left": 2.52,
+   "right": 2.236,
+   "top": 2.005,
+   "bottom": 2.184
+  },
+  "back_sx": 0.1421,
+  "back_sy": -0.0898,
+  "back_lr_total": 4.756,
+  "back_tb_total": 4.189,
+  "back_qa": [
+   "PARTIAL_EDGE_SPAN"
+  ],
+  "front_ok": true,
+  "front_raw_x": -0.076,
+  "front_raw_y": -0.3462,
+  "front_unc_y": 0.201,
+  "inliers": 457,
+  "aspect": 1.4079,
+  "front_qa": []
+ }
+}

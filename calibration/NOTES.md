@@ -65,3 +65,71 @@ Ravensburger renders (1468x2048) are cropped ~1.15mm total in width
    (all pixel-anchor evidence says they do).
 4. card_db/ holds all 3,211 renders + index.json; fetch_images.py
    refreshes it after new set releases (re-run the anchor survey then).
+
+---
+
+# Recalibration under the improved protocol (2026-07-06)
+
+## Data
+
+Five front+back pairs on WHITE paper, diffuse light (IMG_6397/98 Gadget
+12:147; IMG_6403/04 Julieta 12:24; IMG_6405/06 Dangerous Plan 12:133;
+IMG_6407/08 Sabotage 12:96; IMG_6409/10 Woody 12-54-P3 full-art/promo).
+Measured with the library pipelines themselves (polarity-agnostic
+detectors, zero-bias GameSpec for the fronts) - NOT the v1/v2 prototype
+script. Per-pair numbers: reshoot_2026_07_06.json.
+
+## Flip convention (established, was an unstated assumption)
+
+Back photos are related to front photos by a VERTICAL-AXIS flip: L/R
+mirrors, T/B does not (card_report.py's assumption - now confirmed).
+Evidence: the two strong-y pairs (Dangerous Plan, Sabotage: front y -0.49
+/ -0.32) match their backs' frame-derived y (-0.31 / -0.34) in the SAME
+direction (registration 0.09 / 0.02mm); the mirrored hypothesis would
+imply ~0.8mm registrations. All five back photos share one orientation
+(SIFT rotation check, +-2 deg).
+
+## Result
+
+bias_y = mean(front_raw_y - back_derived_y) = -0.08 +- 0.07 (sem),
+card scatter +-0.16. CONSISTENT WITH ZERO. Standard-frame-only subset:
+-0.04 +- 0.07. Full-art (Woody): -0.26, within ~1.1 sigma of the mean ->
+no evidence for a separate full-art constant (as the anchor survey
+predicts). Adopted: y = -0.08, unc 0.10.
+
+bias_x pair-estimator read -0.13 +- 0.09, but a true x bias is excluded
+by the anchor survey (60/60px symmetric frame in all standard renders);
+attributed to front-back print registration noise, which is larger than
+assumed in 2026-07-03: per-card scatter +-0.19mm, one pair (Julieta)
+0.43mm. x kept at 0.0 +- 0.05.
+
+Equivalence margins from the five backs: L+R total 4.775 +- 0.017 (sd) -
+manufacture-constant to 20 microns - and T+B 4.305 +- 0.078. GameSpec
+updated to 4.78 / 4.31 (old 4.76 / 4.6; the 4.6 T/B figure was
+shadow-inflated).
+
+## Why this supersedes the 2026-07-03 value (+0.18 +- 0.06)
+
+The old shoot was dark-desk with detectors since shown vulnerable to the
+shadow-band artifact, whose mechanism (directional light displacing
+horizontal-edge scans outward, worst at the top) produces exactly a
+POSITIVE-only y-bias contamination - the same artifact that excluded the
+Simba pair from that calibration. The new protocol eliminates it (clean
+step edges on white; hybrid cross-check quiet on all ten photos).
+
+Consequence for Simba (8/C2): with the honest constant its front now
+reads y +0.52 / equiv T/B 62/38 and front-back y registration -0.53 -
+i.e. the pair's documented ~0.5mm artifact is VISIBLE instead of being
+half-masked by a bias constant that had absorbed the same artifact.
+test_simba_card.py now regression-tests exactly that behaviour.
+
+## Caveat (documented, accepted)
+
+The pair estimator cannot separate the render-crop asymmetry from any
+off-centre of the printed back frame (delta_frame): the constant is
+operationally bias_render - delta_frame. That is the RIGHT constant for
+the analyzer's purpose (front/back consistency), but it should not be
+quoted as a pure render-pipeline property. Mean back frame-vs-cut offsets
+over the five cards: x -0.03mm, y -0.15mm (top border < bottom border on
+average) - either the frame sits high in the back design or these cards'
+die cuts sit high; indistinguishable with n=5 from one print run.

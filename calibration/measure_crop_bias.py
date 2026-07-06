@@ -6,11 +6,18 @@ Fronts: SIFT to render -> projected render rect anchors the cut search;
 Backs:  gold frame rectangle via tophat+Hough, refined by peak centroid;
         cut = changepoint scanning outward from the frame.
 """
-import sys, json, os
+import json, os, sys
+from pathlib import Path
+
 import numpy as np, cv2
-sys.path.insert(0, "/sessions/wizardly-lucid-bell/ca/src")
-from centering.render_match import match_to_render
-from centering import geometry as G
+
+try:
+    from centering.render_match import match_to_render
+    from centering import geometry as G
+except ImportError:  # running from a checkout without `pip install -e .`
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+    from centering.render_match import match_to_render
+    from centering import geometry as G
 
 CARD_W, CARD_H = 63.5, 88.9
 
@@ -235,12 +242,6 @@ def back_cal(photo):
             "ratio_tb": 100*borders["top"]/(borders["top"]+borders["bottom"]),
             "ratio_lr": 100*borders["left"]/(borders["left"]+borders["right"])}
 
-if __name__=="__main__":
-    mode,photo=sys.argv[1],sys.argv[2]
-    if mode=="front":
-        print(json.dumps(front_cal(photo,sys.argv[3]),indent=1,default=float))
-    else:
-        print(json.dumps(back_cal(photo),indent=1,default=float))
 
 # ---- v3: back via SIFT transfer from reference back photo ----
 from centering.imgio import load_photo
@@ -248,10 +249,11 @@ from centering.locate import coarse_locate
 from centering import edges as LE
 from centering.games.lorcana import LORCANA
 
-REF_BACK="/sessions/wizardly-lucid-bell/mnt/uploads/IMG_6331.HEIC"
-
-def ref_back_frame():
-    rgb,gray,inp=load_photo(REF_BACK)
+def ref_back_frame(ref_back):
+    """ref_back: path to a clean reference back photo (frame fully
+    measurable); its frame lines are transferred to other back photos by
+    SIFT in back_cal2. (Historically IMG_6331.HEIC.)"""
+    rgb,gray,inp=load_photo(ref_back)
     H,W=gray.shape
     coarse,ppm0=coarse_locate(gray,CARD_W,CARD_H)
     ys,ye=coarse["top"].pos,coarse["bottom"].pos
@@ -317,3 +319,35 @@ def back_cal2(photo, ref_gray, ref_frames):
             "borders_mm":borders,
             "ratio_tb":100*borders["top"]/(borders["top"]+borders["bottom"]),
             "ratio_lr":100*borders["left"]/(borders["left"]+borders["right"])}
+
+
+def _main():
+    import argparse
+    ap = argparse.ArgumentParser(
+        description="Render-crop-bias calibration measurements (prototype "
+        "detectors). NOTE: the 2026-07-06 recalibration used the library "
+        "pipelines directly (analyze_back / analyze_borderless with a "
+        "zero-bias GameSpec) rather than these v1/v2 prototypes; results in "
+        "calibration/reshoot_2026_07_06.json. This script remains runnable "
+        "for cross-checking against the prototype methodology.")
+    sub = ap.add_subparsers(dest="mode", required=True)
+    f = sub.add_parser("front", help="front vs local render file")
+    f.add_argument("photo"); f.add_argument("render")
+    b = sub.add_parser("back", help="back, Hough frame detection (v2)")
+    b.add_argument("photo")
+    b2 = sub.add_parser("back2", help="back, frame transfer from a "
+                        "reference back photo (v3)")
+    b2.add_argument("photo"); b2.add_argument("ref_back")
+    a = ap.parse_args()
+    if a.mode == "front":
+        out = front_cal(a.photo, a.render)
+    elif a.mode == "back":
+        out = back_cal(a.photo)
+    else:
+        ref_gray, ref_frames = ref_back_frame(a.ref_back)
+        out = back_cal2(a.photo, ref_gray, ref_frames)
+    print(json.dumps(out, indent=1, default=float))
+
+
+if __name__ == "__main__":
+    _main()

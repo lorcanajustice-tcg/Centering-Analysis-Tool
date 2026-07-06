@@ -9,28 +9,41 @@ LORCANA = GameSpec(
     card_h_mm=88.9,
     back_frame=FrameLineSpec(min_peak=45.0, search_mm=(0.5, 6.0),
                              nominal_border_mm=2.4),
-    # Elsa 6/C2 back measured L+R total ~4.76mm; used only for the
-    # borderless "equivalent ratio" convention. T+B total from four
-    # standard-card backs measured 2026-07-03 (~4.6mm cut-to-frame).
-    equiv_margin_lr_mm=4.76,
-    equiv_margin_tb_mm=4.6,
-    # Render-crop calibration (2026-07-03). Ravensburger renders
-    # (1468x2048 via lorcanajson) are cropped inside trim NON-uniformly:
-    # ~1.15mm total in width (symmetric: std-frame border is 59/59px, and
-    # x cross-validated front-vs-back at the 0.01mm level), but ~2.3mm
-    # total in height with MORE cropped at the TOP. Anchor survey over all
-    # 3211 renders (footer emblem y=1899-1900 +-1px, frame top 66px,
-    # footer band 1907px) shows the crop is layout-locked and constant
-    # across sets/rarities incl. full-art (exceptions: Location cards and
-    # Q1/Q2 promos have distinct layouts, same constancy). Vertical bias
-    # calibrated against four standard-frame front+back pairs
-    # (12:60, 12:91, 10:189, 12:191): +0.18 +- 0.06 (sem) mm, card
-    # scatter +-0.13 (front-back registration + method residuals).
-    # An Enchanted pair (6-8/C2) read higher (+0.4..0.7) but both its
-    # photos carry a shadow-band edge artifact; single-constant model
-    # retained pending cleaner captures. Uncertainty kept honest at 0.2.
-    render_crop_bias_mm={"x": 0.0, "y": 0.20},
-    render_crop_bias_unc_mm={"x": 0.05, "y": 0.20},
+    # Equivalence-margin convention totals (cut-to-frame, both sides),
+    # re-derived 2026-07-06 from FIVE white-background backs (12:147,
+    # 12:24, 12:133, 12:96, 12-54-P3): L+R 4.775 +- 0.017 (sd) mm --
+    # remarkably manufacture-constant -- and T+B 4.305 +- 0.078 (sd) mm.
+    # (The former T+B figure of 4.6 came from the 2026-07-03 dark-mat
+    # shoot, whose horizontal edges were shadow-inflated outward.)
+    equiv_margin_lr_mm=4.78,
+    equiv_margin_tb_mm=4.31,
+    # Render-crop bias, RE-CALIBRATED 2026-07-06 under the improved
+    # protocol (white paper, diffuse light, polarity-agnostic detectors;
+    # photos IMG_6397/98 + IMG_6403-6410, results in
+    # calibration/reshoot_2026_07_06.json). Estimator: per-pair
+    # front_raw_shift minus back-frame-derived shift (vertical-axis flip
+    # convention CONFIRMED from two strong-signal pairs: T/B does not
+    # mirror, L/R does), which cancels each card's die-cut offset.
+    # y = -0.08 +- 0.07 (sem) mm over 5 pairs, card scatter +-0.16
+    # (front-back print registration; one pair reached 0.43mm in x) --
+    # i.e. CONSISTENT WITH ZERO. The 2026-07-03 value (+0.18 +- 0.06,
+    # four dark-mat pairs) is superseded: its positive offset matches the
+    # shadow-band mechanism (directional light displacing horizontal-edge
+    # scans outward, worst at the top), the same artifact that excluded
+    # the Simba pair from that calibration.
+    # Full-art check: the 12-54-P3 (enchanted-layout) pair reads -0.26,
+    # within ~1.1 sigma of the mean given the registration scatter -> no
+    # evidence for a separate full-art constant; single constant retained
+    # (as the anchor survey over all 3211 renders predicts: footer emblem
+    # y=1899-1900 +-1px on bordered AND full-art layouts).
+    # x kept at 0: the render x-crop is anchor-locked symmetric (60/60px
+    # std frame); the pair estimator read -0.13 +- 0.09, attributed to
+    # registration noise (1.5 sigma, and a true x bias is excluded by the
+    # anchors). NOTE: this constant operationally includes any off-centre
+    # of the printed back frame (inseparable in the pair estimator; see
+    # calibration/NOTES.md "2026-07-06 reshoot").
+    render_crop_bias_mm={"x": 0.0, "y": -0.08},
+    render_crop_bias_unc_mm={"x": 0.05, "y": 0.10},
 )
 
 ALLCARDS_URL = "https://lorcanajson.org/files/current/en/allCards.json"

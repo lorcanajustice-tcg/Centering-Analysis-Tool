@@ -20,8 +20,11 @@ Known-good values at introduction (LOOSE bounds per test conventions):
 back  white L 2.31 R 2.46 T 2.12 B 2.28  (L/R 48.3, T/B 48.2)
 back  kraft L 2.26 R 2.44 T 2.13 B 2.22  (L/R 48.1, T/B 49.0)
 back  dark  L/R 47.2, bottom refused
-front white x -0.12mm  y -0.14mm; front kraft x -0.12mm y -0.28mm
-front-vs-back x registration agrees within 0.05mm on white.
+front white x -0.12mm y +0.14mm; front kraft x -0.12mm y 0.00mm
+(y values under the 2026-07-06 recalibrated render-crop bias of -0.08mm).
+Front-vs-back x registration on white: 0.20mm toward front-left -- true
+front-back print registration for this card (scatter over the 5-pair
+calibration set was +-0.19mm; one card reached 0.43mm).
 """
 from pathlib import Path
 
@@ -107,7 +110,7 @@ def test_front_white_shift(fronts):
     assert r.shift_mm["x"].status == "measured"
     assert r.shift_mm["x"].value == pytest.approx(-0.12, abs=0.10)
     assert r.shift_mm["y"].status == "measured"
-    assert r.shift_mm["y"].value == pytest.approx(-0.14, abs=0.25)
+    assert r.shift_mm["y"].value == pytest.approx(0.14, abs=0.25)
     assert r.equivalent_ratio_lr.display
     assert r.render.n_inliers >= 200
 
@@ -115,7 +118,7 @@ def test_front_white_shift(fronts):
 def test_front_kraft_shift(fronts):
     r = fronts["kraft"]
     assert r.shift_mm["x"].value == pytest.approx(-0.12, abs=0.10)
-    assert r.shift_mm["y"].value == pytest.approx(-0.28, abs=0.25)
+    assert r.shift_mm["y"].value == pytest.approx(0.00, abs=0.25)
 
 
 def test_front_cross_background_consistency(fronts):
@@ -135,9 +138,14 @@ def test_front_dark_refuses_with_aspect_flag(fronts):
 
 
 def test_front_back_x_registration_white(backs, fronts):
-    """Front print shift and back border asymmetry describe the same die
-    cut: implied x offsets must agree (target <=0.08mm registration)."""
+    """Front-back x registration under the CONFIRMED vertical-axis flip
+    convention (L/R mirrors between faces, T/B does not - established from
+    the 2026-07-06 calibration set): front_toward_left must equal the
+    back's (L-R)/2. The residual is TRUE front-back print registration;
+    this card measures ~0.20mm, and the 5-pair calibration scatter was
+    +-0.19mm (one card 0.43mm), so the bound is a manufacture envelope,
+    not a measurement-accuracy claim."""
     b = backs["white"].borders_mm
-    back_implied_x = (b["left"].value - b["right"].value) / 2.0
-    front_x = fronts["white"].shift_mm["x"].value
-    assert abs(front_x - back_implied_x) <= 0.10
+    back_toward_front_left = (b["left"].value - b["right"].value) / 2.0
+    front_toward_left = -fronts["white"].shift_mm["x"].value
+    assert abs(front_toward_left - back_toward_front_left) <= 0.35
