@@ -123,7 +123,10 @@ function setFile(role, file) {
     el.appendChild(img);
     el.appendChild(Object.assign(document.createElement('div'), {textContent: file.name, className: 'hint'}));
   }
-  if (role === 'front' && mode() !== 'back') detectCard(file);
+  if (role === 'front' && mode() !== 'back') {
+    cardIdTouched = false;      // new card: prior id/manual edit no longer applies
+    detectCard(file);
+  }
 }
 
 function mode() { return document.querySelector('input[name=mode]:checked').value; }
@@ -141,6 +144,7 @@ $('cardId').addEventListener('input', () => { cardIdTouched = true; });
 
 async function detectCard(file) {
   const el = $('detect');
+  if (!cardIdTouched) $('cardId').value = '';   // clear a stale id from a previous card
   el.style.color = 'var(--dim)';
   el.textContent = 'Detecting card\u2026';
   try {
