@@ -66,17 +66,18 @@
     </div>
 
     <div class="grid">
-      <div id="backBox">
-        <strong>Back photo</strong> <span class="hint">(gold frame side)</span>
-        <div class="drop" id="dropBack"><span class="hint">Click or drop a photo<br>(HEIC / JPG / PNG)</span></div>
-      </div>
       <div id="frontBox">
         <strong>Front photo</strong>
         <div class="drop" id="dropFront"><span class="hint">Click or drop a photo<br>(HEIC / JPG / PNG)</span></div>
         <div style="margin-top:10px">
           <strong>Card ID</strong> <span class="hint">e.g. 6/C2, 7:69, or a unique name</span>
           <input type="text" id="cardId" placeholder="6/C2">
+          <div id="detect" class="hint" style="margin-top:6px"></div>
         </div>
+      </div>
+      <div id="backBox">
+        <strong>Back photo</strong> <span class="hint">(gold frame side)</span>
+        <div class="drop" id="dropBack"><span class="hint">Click or drop a photo<br>(HEIC / JPG / PNG)</span></div>
       </div>
     </div>
 
@@ -122,6 +123,7 @@ function setFile(role, file) {
     el.appendChild(img);
     el.appendChild(Object.assign(document.createElement('div'), {textContent: file.name, className: 'hint'}));
   }
+  if (role === 'front' && mode() !== 'back') detectCard(file);
 }
 
 function mode() { return document.querySelector('input[name=mode]:checked').value; }
@@ -132,6 +134,44 @@ function syncBoxes() {
 }
 $('modes').addEventListener('change', syncBoxes);
 syncBoxes();
+
+// --- automatic card-ID detection from the front photo ---
+let cardIdTouched = false;               // don't clobber a manual entry
+$('cardId').addEventListener('input', () => { cardIdTouched = true; });
+
+async function detectCard(file) {
+  const el = $('detect');
+  el.style.color = 'var(--dim)';
+  el.textContent = 'Detecting card\u2026';
+  try {
+    const data = await b64(file);
+    const r = await fetch('/api/detect', { method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ photo: { name: file.name, data } }) });
+    const out = await r.json();
+    if (!r.ok) throw new Error(out.error || ('server error ' + r.status));
+    applyDetection(out);
+  } catch (e) {
+    el.style.color = 'var(--dim)';
+    el.textContent = 'Auto-detect unavailable (' + e.message + '). Enter the card ID manually.';
+  }
+}
+
+function applyDetection(d) {
+  const el = $('detect');
+  if (d.card_id && !cardIdTouched) $('cardId').value = d.card_id;   // autofill
+  const label = (d.card_id || '') + (d.display ? ' \u2014 ' + d.display : '');
+  if (d.confidence === 'high') {
+    el.style.color = 'var(--ok)';
+    el.textContent = '\u2713 Detected ' + label;
+  } else if (d.confidence === 'low' && d.card_id) {
+    el.style.color = 'var(--warn)';
+    el.textContent = '\u26a0 Best guess ' + label + ' \u2014 please verify.';
+  } else {
+    el.style.color = 'var(--warn)';
+    el.textContent = "Couldn't identify the card automatically \u2014 enter the card ID.";
+  }
+}
 
 function b64(file) {
   return new Promise((res, rej) => {

@@ -96,6 +96,25 @@ def run_analysis(payload: dict) -> dict:
             "saved_to": str(out_dir)}
 
 
+def run_detect(payload: dict) -> dict:
+    """Auto-detect the card id from a front photo (base64 JSON in)."""
+    from centering.identify import detect_card_id
+    from centering.cache import DiskCache
+
+    ph = payload.get("photo") or {}
+    if not ph.get("data"):
+        raise ValueError("no front photo provided for detection")
+    images_dir = ROOT / "card_db" / "images"
+    with tempfile.TemporaryDirectory() as td:
+        p = Path(td) / ("front_" + Path(ph.get("name") or "front").name)
+        p.write_bytes(base64.b64decode(ph["data"]))
+        res = detect_card_id(
+            p, ROOT / "card_db" / "index.json",
+            images_dir if images_dir.exists() else None,
+            ROOT / "card_db" / "sig_index.json", cache=DiskCache())
+    return res.to_dict()
+
+
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, fmt, *args):
         pass
@@ -118,14 +137,15 @@ class Handler(BaseHTTPRequestHandler):
             self._send(404, b"not found", "text/plain")
 
     def do_POST(self):
-        if self.path != "/api/analyze":
+        if self.path not in ("/api/analyze", "/api/detect"):
             self._send(404, b"not found", "text/plain")
             return
         try:
             n = int(self.headers.get("Content-Length", "0"))
             payload = json.loads(self.rfile.read(n))
             with _lock:
-                out = run_analysis(payload)
+                out = (run_detect(payload) if self.path == "/api/detect"
+                       else run_analysis(payload))
             self._send(200, json.dumps(out).encode(), "application/json")
         except ValueError as e:
             self._send(400, json.dumps({"error": str(e)}).encode(),
