@@ -5,10 +5,10 @@ from centering import identify as I
 
 
 def test_construct_card_id_promo():
-    assert I.construct_card_id({"number": 6, "promoGrouping": "C2", "setCode": "7"}) == "6/C2"
+    assert I.construct_card_id({"number": 6, "promoGrouping": "C2", "setCode": "7"}) == "C2-6"
 
 def test_construct_card_id_base():
-    assert I.construct_card_id({"number": 147, "promoGrouping": None, "setCode": "12"}) == "12:147"
+    assert I.construct_card_id({"number": 147, "promoGrouping": None, "setCode": "12"}) == "12-147"
 
 def test_construct_card_id_missing():
     assert I.construct_card_id({"number": None, "promoGrouping": None, "setCode": None}) is None

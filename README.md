@@ -9,7 +9,8 @@ other TCGs via the `games/` adapter layer.
 Double-click **`run_analyzer.bat`**. The first run installs dependencies
 (needs Python 3 from python.org with "Add to PATH" ticked); then your
 browser opens a local page where you pick photos, choose Back / Front /
-Both, enter the card ID for fronts (e.g. `6/C2`), and hit Analyze.
+Both, and hit Analyze. For fronts, the card ID is auto-detected from the
+photo (you can override it); or type it, e.g. `8-210`.
 Results and full-resolution overlay images are saved under `results/`.
 Nothing leaves your machine except fetching the official card render.
 
@@ -22,12 +23,13 @@ Dependencies (installed automatically): opencv, numpy, pillow, pillow-heif.
 ## Usage
 
     centering back  photo.heic                      # bordered face (frame line)
-    centering front photo.heic --card 6/C2          # borderless face (render match)
-    centering card --back b.heic --front f.heic --card 6/C2   # combined + registration
+    centering front photo.heic --card 8-210         # borderless face (render match)
+    centering card --back b.heic --front f.heic --card 8-210  # combined + registration
     # options: --game lorcana  --out overlays_dir  --json result.json
 
-Card IDs: `6/C2` (number/promo grouping), `7:69` (setCode:number), or a
-unique name substring (`"Elsa - Ice Maker"`).
+Card IDs (`SET-NUMBER`): `8-210` (set code - card number), `C2-6` / `P1-42`
+(promo/enchanted grouping - number), or a unique name substring
+(`"Elsa - Ice Maker"`). The older `6/C2` and `7:69` forms are still accepted.
 
 Library API (all functions pure; results JSON-serializable via `.to_dict()`):
 

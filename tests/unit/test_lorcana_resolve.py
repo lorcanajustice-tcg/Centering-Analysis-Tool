@@ -62,6 +62,27 @@ def test_set_code_number_lookup(src):
     assert c["name"] == "Elsa" and c["promoGrouping"] is None
 
 
+@pytest.mark.parametrize("cid,name", [
+    ("7-69", "Elsa"),        # setCode-number (base card)
+    ("1-54", "Rafiki"),      # setCode-number, no promo
+    ("C2-6", "Elsa"),        # promo grouping - number
+    ("P3-54", "Woody"),
+    ("PD1-1", "Beast"),
+    ("D23-23", "Mickey Mouse"),
+    ("c2-6", "Elsa"),        # grouping case-insensitive
+    (" P3 - 54 ", "Woody"),  # whitespace tolerated
+])
+def test_hyphen_set_number_lookup(src, cid, name):
+    assert src.resolve(cid)["name"] == name
+
+
+def test_hyphen_setcode_and_grouping_are_disjoint(src):
+    # "7-69" is the base card (no promo); "C2-6" is the enchanted - the two
+    # namespaces never collide.
+    assert src.resolve("7-69")["promoGrouping"] is None
+    assert src.resolve("C2-6")["promoGrouping"] == "C2"
+
+
 def test_unique_name_lookup(src):
     assert src.resolve("Jungle Guide")["number"] == 54
 
@@ -70,6 +91,7 @@ def test_unique_name_lookup(src):
     "54/204",           # number/total is not a lookup form
     "99/P3",            # no such promo number
     "24/P2",            # ambiguous without the variant letter
+    "P2-24",            # ambiguous grouping-number (two variants)
     "24C/P2",           # no such variant
     "Elsa",             # ambiguous: two printings in stub
     "Stitch",           # unknown name

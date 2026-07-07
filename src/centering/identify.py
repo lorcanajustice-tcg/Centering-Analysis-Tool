@@ -129,16 +129,16 @@ def _hamming64(a: int, b: int) -> int:
 def construct_card_id(rec: dict) -> Optional[str]:
     """Resolver-ready id from a card_db/index.json record.
 
-    Promos carry a promoGrouping ("6/C2"); base cards use setCode:number
-    ("12:147"), which the resolver requires to have no promoGrouping.
+    Promos use the grouping ("C2-6", "P1-42"); set cards use the set
+    code and card number ("8-210"). Both resolve via LorcanaRenderSource.
     """
     num = rec.get("number")
     grp = rec.get("promoGrouping")
     sc = rec.get("setCode")
     if grp:
-        return f"{num}/{grp}"
+        return f"{grp}-{num}"          # promo/enchanted grouping, e.g. C2-6, P1-42
     if sc is not None and num is not None:
-        return f"{sc}:{num}"
+        return f"{sc}-{num}"           # set code - card number, e.g. 8-210, Q1-5
     return None
 
 
@@ -432,7 +432,7 @@ def detect_card_id(front_photo, index_json: Path, images_dir: Optional[Path],
     if index is None:
         return DetectionResult(
             method="none", message="Could not auto-detect the card. Enter the "
-            "card ID manually (e.g. 6/C2). (No signature index found - run "
+            "card ID manually (e.g. 8-210). (No signature index found - run "
             "`python -m centering.identify` to build one.)")
     shortlist = _prefilter(_signature(rgb, gray), index, top_k)
     hits = _verify_candidates(shortlist, kp1, des1, sift, images_dir, cache)
@@ -444,7 +444,7 @@ def detect_card_id(front_photo, index_json: Path, images_dir: Optional[Path],
     return DetectionResult(
         method="none",
         message="Could not confidently identify the card. Enter the card ID "
-                "manually (e.g. 6/C2).")
+                "manually (e.g. 8-210).")
 
 
 if __name__ == "__main__":  # build the signature index

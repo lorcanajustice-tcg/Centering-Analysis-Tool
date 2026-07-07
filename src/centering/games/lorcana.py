@@ -117,6 +117,27 @@ class LorcanaRenderSource:
             if len(hits) == 1:
                 return hits[0]
             raise CardNotFound(f"{card_id}: {len(hits)} matches for set:number lookup")
+        # Unified "SET-NUMBER" form (hyphen): the set identifier is either a
+        # set code (1-13, Q1, Q2) or a promo grouping (C2, P1, D23, ...).
+        # Those two namespaces are disjoint, so the token is unambiguous:
+        # "8-210" -> set 8 / card 210; "C2-6", "P1-42" -> promo grouping.
+        m = re.fullmatch(r"([A-Za-z0-9]+)\s*-\s*(\d+)", card_id.strip())
+        if m:
+            pre, num = m.group(1), int(m.group(2))
+            hits = [c for c in cards if str(c.get("setCode")) == pre
+                    and c.get("number") == num and not c.get("promoGrouping")]
+            if len(hits) == 1:
+                return hits[0]
+            ph = [c for c in cards
+                  if (c.get("promoGrouping") or "").upper() == pre.upper()
+                  and c.get("number") == num]
+            if len(ph) == 1:
+                return ph[0]
+            total = len(hits) + len(ph)
+            raise CardNotFound(
+                f"{card_id}: {total} matches for set/grouping-number lookup"
+                + (f" (variants: {[c.get('fullIdentifier') for c in ph[:5]]})"
+                   if len(ph) > 1 else ""))
         q = card_id.strip().lower()
         hits = [c for c in cards
                 if q in f"{c.get('name','')} - {c.get('version','')}".lower()]

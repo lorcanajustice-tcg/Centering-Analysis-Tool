@@ -70,8 +70,8 @@
         <strong>Front photo</strong>
         <div class="drop" id="dropFront"><span class="hint">Click or drop a photo<br>(HEIC / JPG / PNG)</span></div>
         <div style="margin-top:10px">
-          <strong>Card ID</strong> <span class="hint">e.g. 6/C2, 7:69, or a unique name</span>
-          <input type="text" id="cardId" placeholder="6/C2">
+          <strong>Card ID</strong> <span class="hint">e.g. 8-210, C2-6, P1-42, or a unique name</span>
+          <input type="text" id="cardId" placeholder="8-210">
           <div id="detect" class="hint" style="margin-top:6px"></div>
         </div>
       </div>
@@ -273,7 +273,7 @@ $('go').addEventListener('click', async () => {
     }
     if (m !== 'back') {
       if (!state.front) throw new Error('Select a front photo.');
-      if (!$('cardId').value.trim()) throw new Error('Enter the card ID (e.g. 6/C2) so the official render can be fetched.');
+      if (!$('cardId').value.trim()) throw new Error('Enter the card ID (e.g. 8-210) so the official render can be fetched.');
       payload.photos.front = { name: state.front.name, data: await b64(state.front) };
     }
   } catch (e) { $('err').textContent = e.message; return; }
