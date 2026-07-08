@@ -70,8 +70,39 @@ from ..cache import DiskCache
 ALLCARDS_ZIP_URL = "https://lorcanajson.org/files/current/en/allCards.json.zip"
 
 
+import json
+from pathlib import Path as _Path
+
+
 class CardNotFound(ValueError):
-    pass
+    """Card-id lookup failure.
+
+    n_matches is 0 for "not found", >1 for ambiguous ids, and None when
+    the card database itself was unavailable (e.g. offline first run).
+    """
+
+    def __init__(self, msg, n_matches=None):
+        super().__init__(msg)
+        self.n_matches = n_matches
+
+
+def _variant_from_full_id(rec: dict):
+    """Variant letter from a fullIdentifier token (e.g. "24A/P2 ..." -> "A").
+
+    card_db/index.json records carry no explicit "variant" field; when a
+    card has one, the letter is embedded in the identifier token.
+    """
+    number = str(rec.get("number"))
+    token = (rec.get("fullIdentifier") or "").split("\u2022")[0].split("/")[0].strip()
+    if token and token != number and token.startswith(number):
+        return token[len(number):] or None
+    return None
+
+
+def _default_local_db_dir():
+    """The repo's card_db/ (3,211+ local official renders), when present."""
+    d = _Path(__file__).resolve().parents[3] / "card_db"
+    return d if (d / "index.json").exists() else None
 
 
 class LorcanaRenderSource:
@@ -79,13 +110,26 @@ class LorcanaRenderSource:
 
     lorcanajson includes promos that other APIs miss. Accepted card ids:
     - "6/C2"           number / promo grouping
+    - "C2-6", "8-210"  unified SET-NUMBER form
     - "7:69"           setCode : number
     - "Elsa - Ice Maker" (name or "name - version" substring, unique match)
+
+    Lookup is layered so a failed lookup never blocks an analysis that
+    could still run (2026-07-08, after a stale cache refused 10/C2):
+    1. cached allCards.json (7-day TTL);
+    2. on a ZERO-match only, one forced re-download -- promos are added
+       upstream continually, so a miss usually means the cache predates
+       the card (ambiguous ids are real and are not retried);
+    3. the local card_db index + images (same source, works offline).
     """
 
-    def __init__(self, cache: Optional[DiskCache] = None):
+    def __init__(self, cache=None, local_db_dir=None):
         self.cache = cache or DiskCache()
         self._cards = None
+        self._local_cards = None
+        self._refreshed = False
+        self.local_db_dir = (_Path(local_db_dir) if local_db_dir
+                             else _default_local_db_dir())
 
     def _load(self):
         if self._cards is None:
@@ -93,8 +137,27 @@ class LorcanaRenderSource:
             self._cards = j["cards"]
         return self._cards
 
-    def resolve(self, card_id: str) -> dict:
-        cards = self._load()
+    def _load_local(self):
+        d = getattr(self, "local_db_dir", None)
+        if not d:
+            return None
+        cached = getattr(self, "_local_cards", None)
+        if cached is not None:
+            return cached
+        idx = _Path(d) / "index.json"
+        if not idx.exists():
+            return None
+        recs = json.loads(idx.read_text(encoding="utf-8")).get("cards") or []
+        for r in recs:
+            if "variant" not in r:
+                r["variant"] = _variant_from_full_id(r)
+            f = _Path(d) / (r.get("file") or "")
+            r["_local_file"] = str(f) if r.get("file") and f.exists() else None
+        self._local_cards = recs
+        return recs
+
+    def _match(self, cards, card_id: str) -> dict:
+        """Resolve card_id within a given card list (raises CardNotFound)."""
         m = re.fullmatch(r"(\d+)([A-Za-z])?\s*/\s*([A-Za-z][A-Za-z0-9]*)",
                          card_id.strip())
         if m:
@@ -108,7 +171,7 @@ class LorcanaRenderSource:
             raise CardNotFound(
                 f"{card_id}: {len(hits)} matches for promo lookup"
                 + (f" (variants: {[c.get('fullIdentifier') for c in hits[:5]]})"
-                   if hits else ""))
+                   if hits else ""), n_matches=len(hits))
         m = re.fullmatch(r"(\w+)\s*:\s*(\d+)", card_id.strip())
         if m:
             sc, num = m.group(1), int(m.group(2))
@@ -116,7 +179,9 @@ class LorcanaRenderSource:
                     and c.get("number") == num and not c.get("promoGrouping")]
             if len(hits) == 1:
                 return hits[0]
-            raise CardNotFound(f"{card_id}: {len(hits)} matches for set:number lookup")
+            raise CardNotFound(
+                f"{card_id}: {len(hits)} matches for set:number lookup",
+                n_matches=len(hits))
         # Unified "SET-NUMBER" form (hyphen): the set identifier is either a
         # set code (1-13, Q1, Q2) or a promo grouping (C2, P1, D23, ...).
         # Those two namespaces are disjoint, so the token is unambiguous:
@@ -137,7 +202,7 @@ class LorcanaRenderSource:
             raise CardNotFound(
                 f"{card_id}: {total} matches for set/grouping-number lookup"
                 + (f" (variants: {[c.get('fullIdentifier') for c in ph[:5]]})"
-                   if len(ph) > 1 else ""))
+                   if len(ph) > 1 else ""), n_matches=total)
         q = card_id.strip().lower()
         hits = [c for c in cards
                 if q in f"{c.get('name','')} - {c.get('version','')}".lower()]
@@ -145,14 +210,79 @@ class LorcanaRenderSource:
             return hits[0]
         raise CardNotFound(
             f"{card_id!r}: {len(hits)} name matches"
-            + (f" (e.g. {[c.get('fullIdentifier') for c in hits[:5]]})" if hits else ""))
+            + (f" (e.g. {[c.get('fullIdentifier') for c in hits[:5]]})"
+               if hits else ""), n_matches=len(hits))
+
+    def resolve(self, card_id: str) -> dict:
+        # 1) cached allCards.json
+        try:
+            cards = self._load()
+        except Exception as e:
+            err = CardNotFound(f"{card_id}: card database unavailable ({e})")
+        else:
+            try:
+                return self._match(cards, card_id)
+            except CardNotFound as e:
+                err = e
+        # 2) zero matches may just mean a stale cache: force one refresh.
+        cache = getattr(self, "cache", None)
+        if (cache is not None and not getattr(self, "_refreshed", False)
+                and err.n_matches in (0, None)):
+            try:
+                self._cards = cache.fetch_json_maybe_zipped(
+                    ALLCARDS_ZIP_URL, ttl_days=0)["cards"]
+                self._refreshed = True
+                return self._match(self._cards, card_id)
+            except CardNotFound as e:
+                err = e
+            except Exception:
+                pass  # offline: fall through to the local card_db
+        # 3) local card_db (same upstream source; works offline).
+        if err.n_matches in (0, None):
+            local = self._load_local()
+            if local:
+                try:
+                    return self._match(local, card_id)
+                except CardNotFound:
+                    pass
+        raise err
+
+    def _local_file_for(self, card: dict):
+        """Path of the local card_db render for this card, if we have it."""
+        if card.get("_local_file"):
+            return card["_local_file"]
+        local = self._load_local()
+        if not local:
+            return None
+        key = (card.get("number"), (card.get("promoGrouping") or "").upper(),
+               str(card.get("setCode")), (card.get("variant") or "").upper())
+        for r in local:
+            if (r.get("number"), (r.get("promoGrouping") or "").upper(),
+                    str(r.get("setCode")),
+                    (r.get("variant") or "").upper()) == key:
+                return r.get("_local_file")
+        return None
 
     def get_render(self, card_id: str):
-        """Returns (render_gray float32, render_rgb uint8, url, card_dict)."""
+        """Returns (render_gray float32, render_rgb uint8, url, card_dict).
+
+        Prefers the local card_db image: it was downloaded from the same
+        images.full URL (byte-identical official render, and the one the
+        detector SIFT-verified against), and it works offline. Falls back
+        to fetching the official URL via the DiskCache.
+        """
         card = self.resolve(card_id)
-        url = (card.get("images") or {}).get("full")
+        lf = self._local_file_for(card)
+        if lf:
+            bgr = cv2.imread(lf, cv2.IMREAD_COLOR)
+            if bgr is not None:
+                rgb = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
+                gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY).astype(np.float32)
+                return gray, rgb, lf, card
+        url = (card.get("images") or {}).get("full") or card.get("url")
         if not url:
-            raise CardNotFound(f"{card_id}: no official render URL in database")
+            raise CardNotFound(f"{card_id}: no official render available "
+                               "(no URL in database, no local card_db image)")
         p = self.cache.fetch(url, suffix=".img")
         buf = np.frombuffer(p.read_bytes(), np.uint8)
         bgr = cv2.imdecode(buf, cv2.IMREAD_COLOR)
