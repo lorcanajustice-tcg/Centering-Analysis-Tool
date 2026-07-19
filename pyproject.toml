@@ -1,6 +1,6 @@
 [project]
 name = "centering"
-version = "0.1.0"
+version = "0.2.0"
 description = "Trading-card cut/print centering analysis from phone photos"
 readme = "README.md"
 license = {text = "MIT"}
