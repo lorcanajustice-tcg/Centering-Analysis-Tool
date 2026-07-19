@@ -61,8 +61,10 @@ def analyze_card(back_photo: Optional[str] = None,
                 res.qa.append(QAFlag(
                     "REGISTRATION_DISCREPANCY",
                     f"front and back disagree on the horizontal cut position "
-                    f"by {delta:+.3f}mm (> 2 sigma); check for sleeve, curl, "
-                    "or a mis-detected edge on either face"))
+                    f"by {delta:+.3f}mm (> 2 sigma); genuine front-back "
+                    "print registration reaches this level (scatter "
+                    "+-0.19mm, one calibrated card 0.43mm), but check for "
+                    "sleeve, curl, or a mis-detected edge on either face"))
             fpct = res.front.equivalent_ratio_lr
             bpct = res.back.ratio_lr
             if fpct and bpct and fpct.first_pct and bpct.first_pct:

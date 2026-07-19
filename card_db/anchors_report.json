@@ -360,26 +360,26 @@
     ]
   },
   "footer_emblem_nonbordered_fullart": {
-    "n_total": 360,
-    "n_high_confidence_score_gt_0.55": 133,
+    "n_total": 375,
+    "n_high_confidence_score_gt_0.55": 147,
     "y": {
-      "n": 133,
-      "mean": 1900.602,
-      "std": 1.798,
+      "n": 147,
+      "mean": 1900.449,
+      "std": 1.774,
       "min": 1899,
       "max": 1903,
       "mode": 1899,
-      "pct_within_2px_of_mode": 63.91,
+      "pct_within_2px_of_mode": 67.35,
       "n_outliers_gt2px": 48
     },
     "x": {
-      "n": 133,
-      "mean": 642.857,
-      "std": 8.903,
+      "n": 147,
+      "mean": 642.776,
+      "std": 8.472,
       "min": 590,
       "max": 650,
       "mode": 641,
-      "pct_within_2px_of_mode": 48.12,
+      "pct_within_2px_of_mode": 53.06,
       "n_outliers_gt2px": 69
     },
     "note": "Template matching is much noisier on full-art (Enchanted/Special/full-art Epic-Legendary-Iconic) cards because background art varies. Only high-score matches are trustworthy; low scorers listed separately.",
@@ -583,7 +583,8 @@
       "8-215",
       "8-216",
       "8-217",
-      "8-218"
+      "8-218",
+      "13-222"
     ]
   },
   "per_group_stats_bordered_character_frame": [
@@ -3477,6 +3478,27 @@
     "bordered_border_left_right_top_px": "left mode=60, right mode=60, top mode=66 (top is NOT the ~33px-larger value the physical-card note anticipated; see caveat)",
     "asymmetry_caveat": "The physical-card reference measurement (~1.4mm / ~33px more cropped at top than bottom, at 23.1px/mm) could not be directly cross-checked against a bottom-frame pixel measurement in this analysis, because the bottom of the card is occupied by the black rarity/footer band (by design) rather than card art, so a symmetric \"black frame\" bottom_px measurement analogous to left/right/top is not meaningful \u2014 bottom_px was intentionally skipped per the method. The footer black band TOP edge (1906-1907, i.e. ~141-142px up from the 2048px-tall canvas bottom) is the best available bottom-side anchor and it is extremely constant (std < 1.1px), which supports \"the crop is constant\" but does not by itself prove/disprove the specific 33px top/bottom asymmetry claim -- that would require knowing the true (uncropped) card bleed dimensions.",
     "top_px_measurement_caveat": "top_px is measured as the first row (median across sampled columns) where pixel intensity exceeds black_level+30, scanning the top of the card. For roughly 6% of bordered character-frame cards, dark or busy artwork sits close enough to the top frame edge that this threshold approach overshoots the true border edge by tens to a couple hundred px (verified by manual per-column inspection, e.g. card 1-123 has a dark night-sky illustration starting right at the frame edge). This is a measurement-method limitation, not evidence of real crop variance -- left_px/right_px and the footer black-band-top and footer-emblem-y anchors are far more robust (>98-99 percent within 2px of mode) and are the primary evidence for crop-is-constant. top_px mode (66) still matches those more robust anchors' implied top position on the majority (~93 percent) of cards where the simple threshold method is not confounded by dark art.",
-    "raw_percard_csv": "/sessions/wizardly-lucid-bell/carddb/work/percard_fixed.csv"
+    "raw_percard_csv": "card_db/anchors_percard.csv"
+  },
+  "topup_2026_07_19": {
+    "note": "15 set-13 high-number (Epic full-art) cards appended to anchors_percard.csv via card_db/anchor_survey.py (the original survey script was lost with a sandbox; emblem convention reverse-validated 100/100 legacy rows to 4dp - see script docstring). footer_emblem_nonbordered_fullart block recomputed from the current CSV. footer_emblem_bordered block left as originally published (its n_total=2835 predates a late legacy CSV update; current CSV has 2851 bordered rows, 2660 with score>0.6, consistent with the verdict text).",
+    "appended_ids": [
+      "13-208",
+      "13-209",
+      "13-210",
+      "13-211",
+      "13-212",
+      "13-214",
+      "13-215",
+      "13-217",
+      "13-218",
+      "13-219",
+      "13-220",
+      "13-221",
+      "13-222",
+      "13-223",
+      "13-225"
+    ],
+    "findings": "14/15 are standard full-art layout: footer emblem at (642,1899), std-template score 0.67-0.68 - same layout-locked crop as sets 1-12; render_crop_bias_mm assumption holds unchanged for the set-13 Epic tail. 13-222 (Hundred Acre Wood - Hunny Campsite) is a LANDSCAPE Enchanted-style Location card: emblem not at the portrait-layout anchor, flagged low-score like other special layouts."
   }
 }

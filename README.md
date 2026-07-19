@@ -48,7 +48,10 @@ Library API (all functions pure; results JSON-serializable via `.to_dict()`):
   photo to it, and reports the print shift in mm plus an equivalent grading
   ratio.
 - **Combined report**: front-back registration cross-check and
-  mirrored-ratio consistency.
+  mirrored-ratio consistency. Note: genuine cards show front-back print
+  registration scatter of about +-0.19mm (one calibrated card reached
+  0.43mm), so a small registration delta is normal manufacturing
+  variation, not a miscut.
 - **Honest uncertainty**: every number carries an uncertainty estimate.
   Quantities that can't be measured reliably are *refused* with the reason,
   never guessed.

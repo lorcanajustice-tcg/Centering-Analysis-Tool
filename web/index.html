@@ -42,6 +42,7 @@
            border-bottom:1px solid #2a2e37; font-size:14px; }
   th { color:var(--dim); font-weight:500; }
   .qa { margin:6px 0 0; padding:0; list-style:none; }
+  .qa li.info { border-left-color:#7aa7d9; }
   .qa li { padding:6px 10px; border-left:3px solid var(--warn);
            background:#262a33; border-radius:0 6px 6px 0; margin-top:6px;
            font-size:13px; }
@@ -218,7 +219,7 @@ function tiltLine(t) {
 
 function qaList(arr) {
   if (!arr || !arr.length) return '';
-  return '<ul class="qa">' + arr.map(q => `<li><b>${q.code}</b> — ${q.message}</li>`).join('') + '</ul>';
+  return '<ul class="qa">' + arr.map(q => `<li class="${q.severity||'warning'}"><b>${q.code}</b> — ${q.message}</li>`).join('') + '</ul>';
 }
 
 function faceBack(d) {
