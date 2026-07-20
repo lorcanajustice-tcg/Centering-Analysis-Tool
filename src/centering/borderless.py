@@ -72,7 +72,8 @@ def _render_span_violations(offsets_mm: dict, bounds: dict) -> dict:
 
 def analyze_borderless(photo: str | Path, card_id: str, game: GameSpec,
                        render_source=None, out_dir: Optional[str] = None,
-                       n_scans: int = 50, make_overlay: bool = True
+                       n_scans: int = 50, make_overlay: bool = True,
+                       manual_bbox: Optional[tuple] = None
                        ) -> BorderlessResult:
     rgb, gray, inp = load_photo(photo)
     Himg, Wimg = gray.shape
@@ -88,18 +89,39 @@ def analyze_borderless(photo: str | Path, card_id: str, game: GameSpec,
     # (bright on a dark mat, or dark/bordered on a light background); when
     # segmentation is ambiguous (e.g. mid-tone artwork on a similar-toned
     # background) fall back to per-side coarse scans ---
-    try:
-        x0, y0, x1, y1 = card_component_bbox(gray)
-    except RuntimeError as err:
-        coarse, _ = coarse_locate(gray, game.card_w_mm, game.card_h_mm)
-        bad = [s for s in _SIDES if coarse[s].pos is None]
-        if bad:
-            raise RuntimeError(
-                f"card could not be localized: component segmentation failed "
-                f"({err}); per-side coarse scans failed for "
-                + "; ".join(f"{s}: {coarse[s].reason}" for s in bad)) from err
-        x0, y0 = int(coarse["left"].pos), int(coarse["top"].pos)
-        x1, y1 = int(coarse["right"].pos), int(coarse["bottom"].pos)
+    seed_slop_mm = 2.5
+    if manual_bbox is not None:
+        # human-supplied coarse localization (drag-box). Humans are
+        # excellent at the segmentation step that fails on low-contrast/
+        # textured backgrounds; everything downstream (sub-pixel fits,
+        # tilt correction, gates, estimate tier) runs unchanged. The
+        # box is approximate, so the fine search window is widened.
+        x0, y0, x1, y1 = (int(round(float(v))) for v in manual_bbox)
+        if not (0 <= x0 < x1 <= Wimg and 0 <= y0 < y1 <= Himg):
+            raise ValueError(f"manual card box {manual_bbox} lies "
+                             f"outside the {Wimg}x{Himg} photo")
+        seed_slop_mm = 3.5
+        qa.append(QAFlag(
+            "MANUAL_LOCALIZATION",
+            "card position was seeded manually (drag-box); automatic "
+            "localization bypassed. Fine edge scans, refusal gates and "
+            "the estimate tier are unchanged", severity="info"))
+    else:
+        try:
+            x0, y0, x1, y1 = card_component_bbox(gray)
+        except RuntimeError as err:
+            coarse, _ = coarse_locate(gray, game.card_w_mm, game.card_h_mm)
+            bad = [s for s in _SIDES if coarse[s].pos is None]
+            if bad:
+                raise RuntimeError(
+                    f"card could not be localized: component segmentation "
+                    f"failed ({err}); per-side coarse scans failed for "
+                    + "; ".join(f"{s}: {coarse[s].reason}" for s in bad)
+                    + ". You can seed the card position manually "
+                    "(drag a box over the card) to bypass this step"
+                    ) from err
+            x0, y0 = int(coarse["left"].pos), int(coarse["top"].pos)
+            x1, y1 = int(coarse["right"].pos), int(coarse["bottom"].pos)
     ppm0 = (x1 - x0) / game.card_w_mm
 
     corners_bg = background_uniformity(gray)
@@ -119,7 +141,8 @@ def analyze_borderless(photo: str | Path, card_id: str, game: GameSpec,
         us = rows if side in ("left", "right") else cols
         u_ok, v_ok, diag = E.step_scan(
             gray, side, approx[side], us,
-            search_out_px=2.5 * ppm0, search_in_px=2.5 * ppm0)
+            search_out_px=seed_slop_mm * ppm0,
+            search_in_px=seed_slop_mm * ppm0)
         line, rep = _edge_report(side, "step", u_ok, v_ok, diag)
         methods[side] = "step"
         if line is None:
@@ -128,7 +151,8 @@ def analyze_borderless(photo: str | Path, card_id: str, game: GameSpec,
             # signal the back pipeline uses on dark mats)
             u2, v2, d2 = E.texture_scan(
                 gray, side, approx[side], us,
-                search_out_px=2.5 * ppm0, search_in_px=2.5 * ppm0)
+                search_out_px=seed_slop_mm * ppm0,
+                search_in_px=seed_slop_mm * ppm0)
             line2, rep2 = _edge_report(side, "texture", u2, v2, d2)
             if line2 is not None:
                 line, rep, diag = line2, rep2, d2

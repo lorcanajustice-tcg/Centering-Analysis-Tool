@@ -57,6 +57,8 @@ def run_analysis(payload: dict) -> dict:
                 p.write_bytes(base64.b64decode(ph["data"]))
                 paths[role] = p
 
+        mb = payload.get("manual_bbox")
+        mb = tuple(float(v) for v in mb) if mb else None
         if mode == "back":
             if "back" not in paths:
                 raise ValueError("select a back photo")
@@ -70,7 +72,7 @@ def run_analysis(payload: dict) -> dict:
                 raise ValueError("card ID is required for a borderless front "
                                  '(e.g. "6/C2", "7:69", or a unique card name)')
             res = analyze_borderless(paths["front"], card_id, LORCANA,
-                                     out_dir=out_dir)
+                                     out_dir=out_dir, manual_bbox=mb)
             faces = {"front": res}
             result = res.to_dict()
         elif mode == "card":
@@ -80,7 +82,8 @@ def run_analysis(payload: dict) -> dict:
                 raise ValueError("card ID is required for the front analysis")
             res = analyze_card(back_photo=paths["back"],
                                front_photo=paths["front"],
-                               card_id=card_id, game=LORCANA, out_dir=out_dir)
+                               card_id=card_id, game=LORCANA, out_dir=out_dir,
+                               front_manual_bbox=mb)
             faces = {"back": res.back, "front": res.front}
             result = res.to_dict()
         else:
@@ -115,6 +118,32 @@ def run_detect(payload: dict) -> dict:
     return res.to_dict()
 
 
+def run_preview(payload: dict) -> dict:
+    """Downscaled JPEG preview of an uploaded photo, via the SAME loader
+    the analyzers use (EXIF orientation + HEIC), so canvas coordinates
+    map 1:1 onto analysis coordinates."""
+    from centering.imgio import load_photo
+    import cv2
+    ph = payload.get("photo") or {}
+    if not ph.get("data"):
+        raise ValueError("no photo provided for preview")
+    with tempfile.TemporaryDirectory() as td:
+        p = Path(td) / ("prev_" + Path(ph.get("name") or "img").name)
+        p.write_bytes(base64.b64decode(ph["data"]))
+        rgb, _gray, _inp = load_photo(p)
+    img = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
+    h, w = img.shape[:2]
+    scale = min(1.0, 900.0 / w)
+    if scale < 1.0:
+        img = cv2.resize(img, (int(round(w * scale)), int(round(h * scale))))
+    ok, buf = cv2.imencode(".jpg", img, [cv2.IMWRITE_JPEG_QUALITY, 85])
+    if not ok:
+        raise ValueError("preview encode failed")
+    return {"preview": "data:image/jpeg;base64,"
+            + base64.b64encode(buf).decode(),
+            "width": w, "height": h}
+
+
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, fmt, *args):
         pass
@@ -137,7 +166,8 @@ class Handler(BaseHTTPRequestHandler):
             self._send(404, b"not found", "text/plain")
 
     def do_POST(self):
-        if self.path not in ("/api/analyze", "/api/detect"):
+        if self.path not in ("/api/analyze", "/api/detect",
+                             "/api/preview"):
             self._send(404, b"not found", "text/plain")
             return
         try:
@@ -145,6 +175,8 @@ class Handler(BaseHTTPRequestHandler):
             payload = json.loads(self.rfile.read(n))
             with _lock:
                 out = (run_detect(payload) if self.path == "/api/detect"
+                       else run_preview(payload)
+                       if self.path == "/api/preview"
                        else run_analysis(payload))
             self._send(200, json.dumps(out).encode(), "application/json")
         except ValueError as e:

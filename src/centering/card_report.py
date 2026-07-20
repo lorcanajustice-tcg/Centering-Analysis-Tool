@@ -16,7 +16,8 @@ def analyze_card(back_photo: Optional[str] = None,
                  card_id: Optional[str] = None,
                  game: GameSpec = None,
                  render_source=None,
-                 out_dir: Optional[str] = None) -> CardResult:
+                 out_dir: Optional[str] = None,
+                 front_manual_bbox: Optional[tuple] = None) -> CardResult:
     if back_photo is None and front_photo is None:
         raise ValueError("need at least one photo")
     if front_photo is not None and card_id is None:
@@ -28,7 +29,8 @@ def analyze_card(back_photo: Optional[str] = None,
     if front_photo:
         res.front = analyze_borderless(front_photo, card_id, game,
                                        render_source=render_source,
-                                       out_dir=out_dir)
+                                       out_dir=out_dir,
+                                       manual_bbox=front_manual_bbox)
 
     if res.back and res.front:
         res.registration_mm = {}

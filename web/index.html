@@ -86,6 +86,22 @@
     <button id="go">Analyze</button>
     <div id="spin">Analyzing&hellip; first front analysis downloads the official render (a few seconds).</div>
     <div class="err" id="err"></div>
+    <div id="seedOffer" style="display:none; margin-top:8px">
+      <a href="#" id="seedOpen" style="color:var(--gold)">Mark the card position manually</a>
+      <span class="hint">— you drag a rough box, the analyzer does the precise part.</span>
+    </div>
+    <div id="seedPanel" style="display:none; margin-top:14px">
+      <strong>Mark the card position</strong>
+      <div class="hint">Auto-localization failed. Drag a box roughly along the card's own edges
+        (for a sleeved card: where the artwork meets the sleeve rim, not the sleeve's outer edge).
+        Precision doesn't matter — the analyzer refines to sub-pixel from your box.</div>
+      <canvas id="seedCanvas" style="margin-top:8px; border:1px solid #3a3f4a; border-radius:8px; cursor:crosshair; max-width:100%"></canvas>
+      <div>
+        <button id="seedGo" disabled>Analyze with this box</button>
+        <button id="seedCancel" style="background:#3a3f4a; color:var(--ink)">Cancel</button>
+      </div>
+    </div>
+
   </div>
 
   <div id="results"></div>
@@ -129,6 +145,7 @@ function setFile(role, file) {
     cardIdTouched = false;      // new card: prior id/manual edit no longer applies
     detectCard(file);
   }
+  if (role === 'front') seedReset();   // seed box belongs to the old photo
 }
 
 function mode() { return document.querySelector('input[name=mode]:checked').value; }
@@ -279,6 +296,7 @@ $('go').addEventListener('click', async () => {
   $('results').innerHTML = '';
   const m = mode();
   const payload = { mode: m, card_id: $('cardId').value, photos: {} };
+  if (state.manualBbox && m !== 'back') payload.manual_bbox = state.manualBbox;
   try {
     if (m !== 'front') {
       if (!state.back) throw new Error('Select a back photo.');
@@ -298,12 +316,101 @@ $('go').addEventListener('click', async () => {
     const out = await r.json();
     if (!r.ok) throw new Error(out.error || ('server error ' + r.status));
     render(out);
+    $('seedOffer').style.display = 'none';
   } catch (e) {
     $('err').textContent = e.message;
+    const locFail = /could not be localized/.test(e.message);
+    $('seedOffer').style.display = (locFail && state.front && m !== 'back') ? '' : 'none';
   } finally {
     $('go').disabled = false; $('spin').classList.remove('on');
   }
 });
+
+$('seedOpen').addEventListener('click', e => { e.preventDefault(); openSeedPanel(); });
+
+// --- manual localization seed (drag-box) ---
+let seed = { scale: 1, box: null, dragging: false, x0: 0, y0: 0, img: null };
+
+function seedReset() {
+  seed.box = null;
+  state.manualBbox = null;
+  $('seedPanel').style.display = 'none';
+  $('seedGo').disabled = true;
+}
+
+async function openSeedPanel() {
+  if (!state.front) return;
+  $('err').textContent = '';
+  $('spin').classList.add('on');
+  try {
+    const data = await b64(state.front);
+    const r = await fetch('/api/preview', { method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ photo: { name: state.front.name, data } }) });
+    const out = await r.json();
+    if (!r.ok) throw new Error(out.error || ('server error ' + r.status));
+    const img = new Image();
+    img.onload = () => {
+      seed.img = img;
+      seed.scale = out.width / img.width;   // preview px -> full-res px
+      const cv = $('seedCanvas');
+      cv.width = img.width; cv.height = img.height;
+      seed.box = null;
+      $('seedGo').disabled = true;
+      seedDraw();
+      $('seedPanel').style.display = '';
+      $('seedPanel').scrollIntoView({behavior:'smooth', block:'nearest'});
+    };
+    img.src = out.preview;
+  } catch (e) {
+    $('err').textContent = 'Preview failed: ' + e.message;
+  } finally {
+    $('spin').classList.remove('on');
+  }
+}
+
+function seedDraw() {
+  const cv = $('seedCanvas'), ctx = cv.getContext('2d');
+  ctx.drawImage(seed.img, 0, 0);
+  if (seed.box) {
+    const [a, b, c, d] = seed.box;
+    ctx.strokeStyle = '#ff5252'; ctx.lineWidth = 2;
+    ctx.strokeRect(a, b, c - a, d - b);
+  }
+}
+
+function seedPos(e) {
+  const cv = $('seedCanvas'), r = cv.getBoundingClientRect();
+  return [ (e.clientX - r.left) * cv.width / r.width,
+           (e.clientY - r.top) * cv.height / r.height ];
+}
+
+$('seedCanvas').addEventListener('mousedown', e => {
+  [seed.x0, seed.y0] = seedPos(e);
+  seed.dragging = true;
+  seed.box = null; $('seedGo').disabled = true; seedDraw();
+});
+$('seedCanvas').addEventListener('mousemove', e => {
+  if (!seed.dragging) return;
+  const [x, y] = seedPos(e);
+  seed.box = [Math.min(seed.x0, x), Math.min(seed.y0, y),
+              Math.max(seed.x0, x), Math.max(seed.y0, y)];
+  seedDraw();
+});
+window.addEventListener('mouseup', () => {
+  if (!seed.dragging) return;
+  seed.dragging = false;
+  if (seed.box && (seed.box[2] - seed.box[0]) > 20 && (seed.box[3] - seed.box[1]) > 20) {
+    $('seedGo').disabled = false;
+  }
+});
+$('seedCancel').addEventListener('click', seedReset);
+$('seedGo').addEventListener('click', () => {
+  state.manualBbox = seed.box.map(v => Math.round(v * seed.scale));
+  $('seedPanel').style.display = 'none';
+  $('go').click();
+});
+
 </script>
 </body>
 </html>
