@@ -16,7 +16,7 @@ Mechanics: the accepted scan-line detections are split into clusters by
 position - a refused edge often hides one clean edge plus a parallel
 contaminant (sleeve edge, glare boundary, shadow line). Each internally
 consistent cluster is fitted; the hybrid cut_scan detector
-(back._hybrid_cross_check), which keys on the card-interior plateau and
+(fitting._hybrid_cross_check), which keys on the card-interior plateau and
 is immune to the shadow-band artifact, arbitrates which cluster is the
 physical cut.
 """
@@ -28,7 +28,7 @@ from dataclasses import dataclass
 import numpy as np
 
 from . import geometry as G
-from .back import _hybrid_cross_check
+from .fitting import _hybrid_cross_check
 
 # refusal floor: estimated axis results wider than this are refused
 CAP_MM = 0.5

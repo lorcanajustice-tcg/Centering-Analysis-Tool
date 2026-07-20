@@ -21,7 +21,7 @@ import numpy as np
 
 from . import edges as E
 from . import geometry as G
-from .back import _edge_report, _shadow_band_qa
+from .fitting import _edge_report, _shadow_band_qa
 from .estimate import CAP_MM, rescue_edge
 from .games.base import GameSpec
 from .imgio import load_photo
