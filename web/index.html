@@ -48,6 +48,7 @@
            font-size:13px; }
   .refused { color:var(--bad); }
   .meas { color:var(--ok); }
+  .est { color:var(--warn); }
   .ovl { margin-top:10px; }
   .ovl img { width:100%; border-radius:8px; }
   .path { color:var(--dim); font-size:12px; word-break:break-all; }
@@ -191,19 +192,24 @@ const fmt = (v, d=3) => v == null ? '—' : Number(v).toFixed(d);
 
 function measRow(name, m, unit) {
   if (!m) return '';
-  if (m.status !== 'measured')
+  if (m.status !== 'measured' && m.status !== 'estimated')
     return `<tr><th>${name}</th><td class="refused" colspan="2">refused — ${m.refusal_reason||''}</td></tr>`;
   const u = m.uncertainty ? ` ± ${fmt(m.uncertainty.total)}` : '';
-  return `<tr><th>${name}</th><td class="meas">${fmt(m.value)}${u} ${unit||m.unit||''}</td>
+  const cls = m.status === 'estimated' ? 'est' : 'meas';
+  const pre = m.status === 'estimated' ? '≈ ' : '';
+  const tag = m.status === 'estimated' ? ' (estimated)' : '';
+  return `<tr><th>${name}</th><td class="${cls}">${pre}${fmt(m.value)}${u} ${unit||m.unit||''}${tag}</td>
           <td class="hint">${m.uncertainty ? 'stat '+fmt(m.uncertainty.statistical)+' · persp '+fmt(m.uncertainty.perspective)+' · edge '+fmt(m.uncertainty.edge_definition) : ''}</td></tr>`;
 }
 
 function ratioBlock(label, r) {
   if (!r) return '';
-  if (r.status !== 'measured')
+  if (r.status !== 'measured' && r.status !== 'estimated')
     return `<div class="bigline refused">${label}: refused</div><div class="hint">${r.refusal_reason||''}</div>`;
   const u = r.uncertainty_pts ? ` ± ${Number(r.uncertainty_pts.total).toFixed(1)} pts` : '';
-  return `<div class="bigline">${label}: ${r.display} <small>(${Number(r.first_pct).toFixed(1)}%${u})</small></div>`;
+  const cls = r.status === 'estimated' ? ' est' : '';
+  const tag = r.status === 'estimated' ? ' <small>(estimated)</small>' : '';
+  return `<div class="bigline${cls}">${label}: ${r.display} <small>(${Number(r.first_pct).toFixed(1)}%${u})</small>${tag}</div>`;
 }
 
 function tiltLine(t) {
@@ -232,10 +238,12 @@ function faceBack(d) {
 
 function faceFront(d) {
   const res = d.result;
-  const dir = (m, pos, neg) => m && m.status === 'measured' ? (m.value >= 0 ? pos : neg) : '';
+  const shown = m => m && (m.status === 'measured' || m.status === 'estimated');
+  const est = m => m && m.status === 'estimated';
+  const dir = (m, pos, neg) => shown(m) ? (m.value >= 0 ? pos : neg) : '';
   return `<div class="panel"><h2>Front (borderless)</h2>
-    ${res.shift_mm.x && res.shift_mm.x.status==='measured' ? `<div class="bigline">${Math.abs(res.shift_mm.x.value).toFixed(3)}mm <small>print shift toward ${dir(res.shift_mm.x,'right','left')} edge</small></div>` : ratioBlock('X', {status:'refused', refusal_reason: res.shift_mm.x ? res.shift_mm.x.refusal_reason : ''})}
-    ${res.shift_mm.y && res.shift_mm.y.status==='measured' ? `<div class="bigline">${Math.abs(res.shift_mm.y.value).toFixed(3)}mm <small>print shift toward ${dir(res.shift_mm.y,'bottom','top')} edge</small></div>` : ''}
+    ${shown(res.shift_mm.x) ? `<div class="bigline${est(res.shift_mm.x)?' est':''}">${est(res.shift_mm.x)?'≈ ':''}${Math.abs(res.shift_mm.x.value).toFixed(3)}mm <small>print shift toward ${dir(res.shift_mm.x,'right','left')} edge${est(res.shift_mm.x)?' — estimated':''}</small></div>` : ratioBlock('X', {status:'refused', refusal_reason: res.shift_mm.x ? res.shift_mm.x.refusal_reason : ''})}
+    ${shown(res.shift_mm.y) ? `<div class="bigline${est(res.shift_mm.y)?' est':''}">${est(res.shift_mm.y)?'≈ ':''}${Math.abs(res.shift_mm.y.value).toFixed(3)}mm <small>print shift toward ${dir(res.shift_mm.y,'bottom','top')} edge${est(res.shift_mm.y)?' — estimated':''}</small></div>` : ''}
     ${ratioBlock('Equivalent L/R', res.equivalent_ratio_lr)} ${ratioBlock('Equivalent T/B', res.equivalent_ratio_tb)}
     <table>${measRow('shift x', res.shift_mm.x, 'mm')}${measRow('shift y', res.shift_mm.y, 'mm')}</table>
     <div class="hint">${res.render ? `render match: ${res.render.n_inliers} inliers, ${res.render.median_reproj_px}px reprojection — ${(res.render.notes||[]).join('; ')}` : ''}</div>

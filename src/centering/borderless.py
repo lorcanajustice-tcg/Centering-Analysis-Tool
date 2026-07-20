@@ -22,6 +22,7 @@ import numpy as np
 from . import edges as E
 from . import geometry as G
 from .back import _edge_report, _shadow_band_qa
+from .estimate import CAP_MM, rescue_edge
 from .games.base import GameSpec
 from .imgio import load_photo
 from .locate import background_uniformity, card_component_bbox, coarse_locate
@@ -113,7 +114,7 @@ def analyze_borderless(photo: str | Path, card_id: str, game: GameSpec,
     rows = np.linspace(y0 + 0.15 * (y1 - y0), y0 + 0.85 * (y1 - y0), n_scans)
     cols = np.linspace(x0 + 0.15 * (x1 - x0), x0 + 0.85 * (x1 - x0), n_scans)
     approx = {"left": x0, "right": x1, "top": y0, "bottom": y1}
-    lines, reports, methods = {}, {}, {}
+    lines, reports, methods, est_extra = {}, {}, {}, {}
     for side in _SIDES:
         us = rows if side in ("left", "right") else cols
         u_ok, v_ok, diag = E.step_scan(
@@ -132,6 +133,36 @@ def analyze_borderless(photo: str | Path, card_id: str, game: GameSpec,
             if line2 is not None:
                 line, rep, diag = line2, rep2, d2
                 methods[side] = "texture"
+        if line is None:
+            # estimate tier: the strict tier refused this edge; attempt an
+            # explicitly-labelled rescue (cluster split + hybrid cut
+            # cross-check arbitration). Never silent: the report keeps the
+            # strict refusal, the edge fit is status="estimated", and the
+            # axis result is capped at CAP_MM total uncertainty.
+            strict_notes = "; ".join(rep.notes) or "refused"
+            for mname, uu, vv in (("step", u_ok, v_ok), ("texture", u2, v2)):
+                if len(uu) < 4:
+                    continue
+                est, why = rescue_edge(gray, side, uu, vv, us, ppm0)
+                if est is None:
+                    rep.notes.append(f"estimate tier ({mname}): {why}")
+                    continue
+                line = est.line
+                rep = EdgeFitReport(
+                    edge=side, method=f"{mname}-estimate",
+                    n_points=line.n, n_rejected=len(uu) - line.n,
+                    rms_residual_px=line.rms,
+                    angle_deg=line.angle_from_nominal_deg(),
+                    bow_px=line.bow_px, status="estimated",
+                    notes=[f"strict tier refused: {strict_notes}",
+                           est.note])
+                methods[side] = mname
+                est_extra[side] = est.extra_unc_mm
+                qa.append(QAFlag(
+                    "EDGE_ESTIMATED",
+                    f"{side} edge is an estimate-tier rescue ({mname}): "
+                    f"{est.note}"))
+                break
         if line is not None and line.bow_px and line.bow_px > 3.0:
             qa.append(QAFlag("CURL_SUSPECTED",
                              f"{side} edge bows {line.bow_px:.1f}px over its "
@@ -311,7 +342,9 @@ def analyze_borderless(photo: str | Path, card_id: str, game: GameSpec,
         ed_b = game.edge_def_px[methods.get(b_side, "step")]
         ed = math.sqrt(ed_a ** 2 + ed_b ** 2) / 2.0 / inp.px_per_mm
         b_unc = bias_unc["x" if a_side == "left" else "y"]
-        edge_def = math.sqrt(ed ** 2 + b_unc ** 2)
+        est_u = math.sqrt(est_extra.get(a_side, 0.0) ** 2
+                          + est_extra.get(b_side, 0.0) ** 2)
+        edge_def = math.sqrt(ed ** 2 + b_unc ** 2 + est_u ** 2)
         return Uncertainty(statistical=stat, perspective=persp,
                            edge_definition=edge_def)
 
@@ -323,6 +356,23 @@ def analyze_borderless(photo: str | Path, card_id: str, game: GameSpec,
         res.shift_mm[ax] = Measurement.refused(
             "mm", "physically implausible render-to-cut geometry: "
             + span_bad[ax])
+
+    # --- estimate tier: label and cap ---
+    for ax, (a, b) in (("x", ("left", "right")), ("y", ("top", "bottom"))):
+        if a not in est_extra and b not in est_extra:
+            continue
+        m = res.shift_mm[ax]
+        if m.status != "measured":
+            continue
+        tot = m.uncertainty.total
+        which = "/".join(s for s in (a, b) if s in est_extra)
+        if tot > CAP_MM:
+            res.shift_mm[ax] = Measurement.refused(
+                "mm", f"estimate-tier uncertainty +-{tot:.2f}mm exceeds "
+                f"the +-{CAP_MM:.1f}mm cap ({which} edge estimated); a "
+                "cleaner capture is needed for a grading-relevant number")
+        else:
+            m.status = "estimated"
 
     # --- grading-style equivalent ratios (convention, not measurement) ---
     def equiv(axis, shift, total_margin):
@@ -340,15 +390,15 @@ def analyze_borderless(photo: str | Path, card_id: str, game: GameSpec,
                           perspective=s.perspective * k,
                           edge_definition=s.edge_definition * k)
         return Ratio(axis=axis, first_pct=100.0 * a / (a + b),
-                     uncertainty_pts=unc)
+                     uncertainty_pts=unc, status=m.status)
 
     res.equivalent_ratio_lr = (
         Ratio.refused("LR", res.shift_mm["x"].refusal_reason)
-        if res.shift_mm["x"].status != "measured"
+        if res.shift_mm["x"].status == "refused"
         else equiv("LR", shift_x, game.equiv_margin_lr_mm))
     res.equivalent_ratio_tb = (
         Ratio.refused("TB", res.shift_mm["y"].refusal_reason)
-        if res.shift_mm["y"].status != "measured"
+        if res.shift_mm["y"].status == "refused"
         else equiv("TB", shift_y, game.equiv_margin_tb_mm))
 
     # --- overlay: fitted edges + render bounds projected into the photo ---
@@ -364,7 +414,10 @@ def analyze_borderless(photo: str | Path, card_id: str, game: GameSpec,
         sx, sy = res.shift_mm["x"], res.shift_mm["y"]
 
         def _fmt(m):
-            return f"{m.value:+.2f}mm" if m.value is not None else "refused"
+            if m.value is None:
+                return "refused"
+            pre = "~" if m.status == "estimated" else ""
+            return f"{pre}{m.value:+.2f}mm"
         ov.banner([
             f"FRONT print shift: x {_fmt(sx)}  y {_fmt(sy)}",
             f"(+x = print toward right edge, +y = toward bottom)",

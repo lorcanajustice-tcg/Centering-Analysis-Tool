@@ -39,7 +39,7 @@ class Measurement:
     value: Optional[float]
     unit: str
     uncertainty: Optional[Uncertainty] = None
-    status: str = "measured"  # "measured" | "refused"
+    status: str = "measured"  # "measured" | "estimated" | "refused"
     refusal_reason: Optional[str] = None
 
     @classmethod
@@ -104,7 +104,7 @@ class EdgeFitReport:
     rms_residual_px: Optional[float] = None
     angle_deg: Optional[float] = None      # deviation from nominal orientation
     bow_px: Optional[float] = None         # quadratic sag over span (curl indicator)
-    status: str = "ok"                     # ok|flagged|refused
+    status: str = "ok"                     # ok|flagged|estimated|refused
     notes: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict:

@@ -30,18 +30,20 @@ def _summary_front(r):
     lines = [f"FRONT ({r.input.photo})"]
     for ax, label in (("x", "horizontal"), ("y", "vertical")):
         m = r.shift_mm.get(ax)
-        if m and m.status == "measured":
+        if m and m.status in ("measured", "estimated"):
             direc = {("x", 1): "right", ("x", -1): "left",
                      ("y", 1): "bottom", ("y", -1): "top"}[
                          (ax, 1 if m.value >= 0 else -1)]
+            tag = " [ESTIMATED]" if m.status == "estimated" else ""
             lines.append(f"  print shift {label}: {abs(m.value):.3f} mm toward "
-                         f"{direc} edge (+- {m.uncertainty.total:.3f})")
+                         f"{direc} edge (+- {m.uncertainty.total:.3f}){tag}")
         elif m:
             lines.append(f"  shift {ax}: refused - {m.refusal_reason}")
     for name, rr in (("equiv L/R", r.equivalent_ratio_lr),
                      ("equiv T/B", r.equivalent_ratio_tb)):
-        if rr and rr.status == "measured":
-            lines.append(f"  {name}: {rr.display} (convention: nominal margin)")
+        if rr and rr.status in ("measured", "estimated"):
+            tag = " [ESTIMATED]" if rr.status == "estimated" else ""
+            lines.append(f"  {name}: {rr.display} (convention: nominal margin){tag}")
     if r.render:
         lines.append(f"  render match: {r.render.n_inliers} inliers, "
                      f"{r.render.median_reproj_px:.2f}px reprojection")
