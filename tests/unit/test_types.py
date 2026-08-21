@@ -18,11 +18,13 @@ def test_measurement_serializes():
 
 
 def test_refused_measurement():
-    m = Measurement.refused("mm", "top edge unmeasurable: insufficient contrast")
+    m = Measurement.refused(
+        "mm", "The top edge of the card could not be measured: too little "
+        "brightness difference between card and background.")
     d = m.to_dict()
     assert d["value"] is None
     assert d["status"] == "refused"
-    assert "unmeasurable" in d["refusal_reason"]
+    assert "could not be measured" in d["refusal_reason"]
 
 
 def test_ratio_display_and_convention():

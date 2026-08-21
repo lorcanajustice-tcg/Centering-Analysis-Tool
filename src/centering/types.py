@@ -5,6 +5,8 @@ import math
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
+from .plain import advice_for, title_for
+
 SCHEMA_VERSION = "1.0"
 
 
@@ -41,11 +43,15 @@ class Measurement:
     uncertainty: Optional[Uncertainty] = None
     status: str = "measured"  # "measured" | "estimated" | "refused"
     refusal_reason: Optional[str] = None
+    # what the person should do about it, in plain words
+    refusal_advice: Optional[str] = None
 
     @classmethod
-    def refused(cls, unit: str, reason: str) -> "Measurement":
+    def refused(cls, unit: str, reason: str,
+                advice: Optional[str] = None) -> "Measurement":
         return cls(value=None, unit=unit, uncertainty=None,
-                   status="refused", refusal_reason=reason)
+                   status="refused", refusal_reason=reason,
+                   refusal_advice=advice)
 
     def to_dict(self) -> dict:
         d: dict[str, Any] = {"value": _r(self.value), "unit": self.unit,
@@ -54,6 +60,8 @@ class Measurement:
             d["uncertainty"] = self.uncertainty.to_dict()
         if self.refusal_reason:
             d["refusal_reason"] = self.refusal_reason
+        if self.refusal_advice:
+            d["refusal_advice"] = self.refusal_advice
         return d
 
 
@@ -67,10 +75,13 @@ class Ratio:
     uncertainty_pts: Optional[Uncertainty] = None
     status: str = "measured"
     refusal_reason: Optional[str] = None
+    refusal_advice: Optional[str] = None
 
     @classmethod
-    def refused(cls, axis: str, reason: str) -> "Ratio":
-        return cls(axis=axis, status="refused", refusal_reason=reason)
+    def refused(cls, axis: str, reason: str,
+                advice: Optional[str] = None) -> "Ratio":
+        return cls(axis=axis, status="refused", refusal_reason=reason,
+                   refusal_advice=advice)
 
     @property
     def display(self) -> Optional[str]:
@@ -92,6 +103,8 @@ class Ratio:
             d["uncertainty_pts"] = self.uncertainty_pts.to_dict()
         if self.refusal_reason:
             d["refusal_reason"] = self.refusal_reason
+        if self.refusal_advice:
+            d["refusal_advice"] = self.refusal_advice
         return d
 
 
@@ -137,12 +150,27 @@ class TiltReport:
 
 @dataclass
 class QAFlag:
+    """One thing worth telling the person about the photo.
+
+    `code` is the stable internal name (it goes in the saved JSON file and
+    the tests). `message` says what happened, in plain words with the real
+    numbers in it. `title` and `advice` come from plain.py, so the wording
+    a person reads is all in one place."""
     code: str
     message: str
     severity: str = "warning"  # info|warning
 
+    @property
+    def title(self) -> str:
+        return title_for(self.code)
+
+    @property
+    def advice(self) -> str:
+        return advice_for(self.code)
+
     def to_dict(self) -> dict:
-        return {"code": self.code, "message": self.message,
+        return {"code": self.code, "title": self.title,
+                "message": self.message, "advice": self.advice,
                 "severity": self.severity}
 
 

@@ -23,7 +23,8 @@ def robust_polyfit(u: np.ndarray, v: np.ndarray, deg: int = 1,
     v = np.asarray(v, dtype=np.float64)
     mask = np.isfinite(u) & np.isfinite(v)
     if mask.sum() < deg + 2:
-        raise ValueError("not enough points for robust fit")
+        raise ValueError("There are too few readings along this edge to "
+                         "fit a line through them.")
     if deg == 1 and mask.sum() >= 6:
         # Robust initialization: repeated-median slope (Siegel) followed by
         # LTS C-steps. A clustered same-sign biased tail (e.g. shadow-drifted

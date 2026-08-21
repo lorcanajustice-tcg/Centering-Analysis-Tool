@@ -88,12 +88,14 @@ def _colour_edge(chroma, side, approx, us, out_px, in_px, primary, qa, ppm):
             where = "outside" if disp > 0 else "inside"
             qa.append(QAFlag(
                 "COLOUR_EDGE_ADOPTED",
-                f"{side} edge: the {primary[3]} scan placed the cut "
-                f"{abs(disp):.3f}mm {where} the chromaticity step, which is "
-                "the shadow/edge-rim signature; the background keeps its hue "
-                "in shadow, so the colour edge is taken as the cut",
+                f"On the {side} edge, brightness put the card edge "
+                f"{abs(disp):.3f}mm {where} where colour put it. A shadow "
+                "changes how bright the background looks but not what "
+                "colour it is, so the colour reading was used - it is the "
+                "more reliable one here.",
                 severity="info"))
-    crep.notes.append("chromaticity step (background hue survives shadow)")
+    crep.notes.append("edge found by colour change, which shadows do not "
+                      "affect")
     return (cline, crep, cd, "colour")
 
 
@@ -110,10 +112,11 @@ def _shadow_band_qa(qa, gray, lines, rows, cols, ppm):
             where = "inside" if d > 0 else "outside"
             qa.append(QAFlag(
                 "SHADOW_BAND_SUSPECTED",
-                f"{side} edge: hybrid cut detector places the cut "
-                f"{abs(d):.2f}mm {where} the primary detection; a shadow "
-                "band or glare may be displacing the edge scan - distrust "
-                "this side and prefer a diffuse-light recapture",
+                f"Two different ways of finding the {side} edge disagree "
+                f"by {abs(d):.2f}mm. That usually means a shadow or a band "
+                "of glare running along that edge is being read as the "
+                f"edge itself, so the {side} number may be off by roughly "
+                "that much.",
                 severity="warning"))
 
 
@@ -122,8 +125,8 @@ def _edge_report(name, method, us, vs, diag, flag_rms=1.5, min_pts=10):
                         n_rejected=diag.n_attempted - diag.n_ok)
     if diag.n_ok < min_pts:
         rep.status = "refused"
-        rep.notes.append(f"only {diag.n_ok}/{diag.n_attempted} scan lines "
-                         f"usable ({diag.summary()})")
+        rep.notes.append(f"only {diag.n_ok} of {diag.n_attempted} readings "
+                         f"along that edge were usable ({diag.summary()})")
         return None, rep
     orientation = "v" if name.endswith(("left", "right")) else "h"
     line = G.FittedLine.fit(orientation, us, vs)
@@ -134,14 +137,18 @@ def _edge_report(name, method, us, vs, diag, flag_rms=1.5, min_pts=10):
     rep.bow_px = line.bow_px
     if line.rms > 4.0:
         rep.status = "refused"
-        rep.notes.append(f"fit residual {line.rms:.2f}px far above target; "
-                         "detections inconsistent")
+        rep.notes.append(f"the readings along that edge were scattered by "
+                         f"{line.rms:.2f} pixels instead of the usual one or "
+                         "two, so they do not describe a straight edge")
         return None, rep
     if line.rms > flag_rms:
         rep.status = "flagged"
-        rep.notes.append(f"fit residual {line.rms:.2f}px above {flag_rms}px target")
+        rep.notes.append(f"the readings along that edge were a little "
+                         f"scattered: {line.rms:.2f} pixels, where under "
+                         f"{flag_rms} is expected")
     if diag.n_ok < 0.7 * diag.n_attempted:
-        rep.notes.append(f"partial coverage: {diag.summary()}")
+        rep.notes.append(f"only part of that edge could be read "
+                         f"({diag.summary()})")
     return line, rep
 
 
@@ -206,14 +213,16 @@ def _frame_proximity_qa(qa, lines, w_img, h_img, extra=""):
     if len(near) == 4:
         qa.append(QAFlag(
             "TIGHT_CROP",
-            "all four card edges lie within 5% of the image frame: this is "
-            "a crop or a scan rather than a framed photo. Edge detection "
-            "handles it; but if the image was cropped from a phone photo, "
-            "radial lens distortion near the original frame is not "
-            "modelled" + extra, severity="info"))
+            "All four card edges sit right up against the edge of the "
+            "image, so this is a scan or a crop rather than a photo. It is "
+            "measured in exactly the same way. The one thing to know: if "
+            "it was cropped out of a phone photo, the slight bending a "
+            "lens causes near the edge of the frame is not corrected for."
+            + extra, severity="info"))
         return
     for side in near:
         qa.append(QAFlag("RADIAL_DISTORTION_RISK",
-                         f"{side} card edge lies within 5% of the photo frame "
-                         "edge; radial lens distortion is not modelled "
-                         "there" + extra))
+                         f"The {side} edge of the card is right up against "
+                         "the edge of the photo, where phone lenses bend "
+                         "the picture slightly. That bending is not "
+                         "corrected for." + extra))

@@ -46,7 +46,9 @@ def test_tb_refused_with_reason(result):
     for side in ("top", "bottom"):
         m = result.borders_mm[side]
         assert m.status == "refused"
-        assert "unmeasurable" in m.refusal_reason or "contrast" in m.refusal_reason
+        # wording lives in plain.py / the pipelines; assert the shape of
+        # the sentence, not one jargon word
+        assert "could not be" in m.refusal_reason
 
 
 def test_fit_quality(result):

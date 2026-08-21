@@ -19,9 +19,10 @@ def analyze_card(back_photo: Optional[str] = None,
                  out_dir: Optional[str] = None,
                  front_manual_bbox: Optional[tuple] = None) -> CardResult:
     if back_photo is None and front_photo is None:
-        raise ValueError("need at least one photo")
+        raise ValueError("Choose at least one photo.")
     if front_photo is not None and card_id is None:
-        raise ValueError("borderless front analysis requires card_id")
+        raise ValueError("A card ID is needed to analyse the front, so "
+                         "the official card picture can be looked up.")
 
     res = CardResult(game=game.name)
     if back_photo:
@@ -62,22 +63,28 @@ def analyze_card(back_photo: Optional[str] = None,
             if abs(delta) > 2.0 * sig.total:
                 res.qa.append(QAFlag(
                     "REGISTRATION_DISCREPANCY",
-                    f"front and back disagree on the horizontal cut position "
-                    f"by {delta:+.3f}mm (> 2 sigma); genuine front-back "
-                    "print registration reaches this level (scatter "
-                    "+-0.19mm, one calibrated card 0.43mm), but check for "
-                    "sleeve, curl, or a mis-detected edge on either face"))
+                    "The front and the back disagree about where the card "
+                    f"was cut left-to-right, by {delta:+.3f}mm - more than "
+                    "the two measurements' own margins of error. Some "
+                    "disagreement is normal, because the two sides are "
+                    "printed in separate passes: real cards typically "
+                    "differ by about 0.19mm, and one card measured here "
+                    "reached 0.43mm."))
             fpct = res.front.equivalent_ratio_lr
             bpct = res.back.ratio_lr
             if fpct and bpct and fpct.first_pct and bpct.first_pct:
                 res.mirror_consistency = (
-                    f"back L/R {bpct.display} vs front equivalent "
-                    f"{fpct.display} (mirrored {100-fpct.first_pct:.1f}/"
-                    f"{fpct.first_pct:.1f}): one cut, "
-                    f"registration {delta:+.3f}mm")
+                    f"The back reads {bpct.display} left to right. The "
+                    f"front works out to {fpct.display}, which is "
+                    f"{100-fpct.first_pct:.1f}/{fpct.first_pct:.1f} when "
+                    "you flip it over to compare. Both are looking at the "
+                    "same single cut, and they agree to within "
+                    f"{abs(delta):.3f}mm.")
         else:
             res.registration_mm["x"] = Measurement.refused(
-                "mm", "requires measured back L/R borders and front x-shift")
+                "mm", "This cross-check needs the back's left and right "
+                "borders and the front's sideways shift. At least one of "
+                "those could not be measured.")
         by_t = res.back.borders_mm.get("top")
         by_b = res.back.borders_mm.get("bottom")
         fy = res.front.shift_mm.get("y")
@@ -107,17 +114,25 @@ def analyze_card(back_photo: Optional[str] = None,
             if abs(delta) > 2.0 * sig.total:
                 res.qa.append(QAFlag(
                     "REGISTRATION_DISCREPANCY",
-                    f"front and back disagree on the vertical cut position "
-                    f"by {delta:+.3f}mm (> 2 sigma); genuine front-back "
-                    "print registration reaches this level (scatter "
-                    "+-0.19mm), but check for curl or a mis-detected edge"))
+                    "The front and the back disagree about where the card "
+                    f"was cut top-to-bottom, by {delta:+.3f}mm - more than "
+                    "the two measurements' own margins of error. Some "
+                    "disagreement is normal (real cards typically differ "
+                    "by about 0.19mm); more than that usually means the "
+                    "card is bent, or an edge was found in the wrong "
+                    "place."))
         else:
             reasons = []
-            for nm, m in (("back top", by_t), ("back bottom", by_b),
-                          ("front y", fy)):
+            # Name what is missing; the reason why sits on those entries
+            # already, and repeating it here just makes a wall of red.
+            for nm, m in (("the back's top border", by_t),
+                          ("the back's bottom border", by_b),
+                          ("the front's up-and-down shift", fy)):
                 if m is None or m.status != "measured":
-                    reasons.append(f"{nm} unavailable"
-                                   + (f" ({m.refusal_reason})" if m and m.refusal_reason else ""))
+                    reasons.append(nm)
+            missing = reasons[0] if len(reasons) == 1 else \
+                ", ".join(reasons[:-1]) + " and " + reasons[-1]
             res.registration_mm["y"] = Measurement.refused(
-                "mm", "; ".join(reasons))
+                "mm", f"This cross-check needs {missing}, which could not "
+                "be measured. See the reasons above.")
     return res

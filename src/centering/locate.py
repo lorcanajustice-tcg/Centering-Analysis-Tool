@@ -198,7 +198,8 @@ def tight_crop_locate(gray: np.ndarray, card_w_mm: float, card_h_mm: float,
         pos = float(idx) if side in ("left", "top") else float(dim - idx)
         out[side] = CoarseSide(
             "ok", pos, len(thirds), float(max(thirds) - min(thirds)),
-            reason="located from the image border (card nearly fills the frame)",
+            reason="found from the edge of the image, because the card "
+                   "nearly fills it",
             method="step", slop_mm=TIGHT_SLOP_MM)
 
     w_px = out["right"].pos - out["left"].pos
@@ -253,17 +254,18 @@ def coarse_locate(gray: np.ndarray, card_w_mm: float, card_h_mm: float,
         if spreads:
             sides[side] = CoarseSide(
                 "failed", None, max(diag_t.n_ok, diag_s.n_ok), min(spreads),
-                f"inconsistent coarse edge detections (spread "
-                f"{min(spreads):.0f}px); likely glare bands or background "
-                "texture non-uniformity")
+                f"the readings along this edge did not agree with each "
+                f"other - they were spread over {min(spreads):.0f} pixels, "
+                "which usually means a band of glare, or a background that "
+                "changes too much along the edge")
         else:
             sides[side] = CoarseSide(
                 "failed", None, diag_t.n_ok, 0.0,
-                f"insufficient texture/brightness contrast between background "
-                f"and card (texture: {diag_t.n_ok}/{diag_t.n_attempted} "
-                f"coarse lines usable, {diag_t.summary()}; step: "
-                f"{diag_s.n_ok}/{diag_s.n_attempted} usable, "
-                f"{diag_s.summary()})")
+                f"the background and the card look too alike along this "
+                f"edge. Looking for a change in surface: {diag_t.n_ok} of "
+                f"{diag_t.n_attempted} readings usable ({diag_t.summary()}). "
+                f"Looking for a change in brightness: {diag_s.n_ok} of "
+                f"{diag_s.n_attempted} usable ({diag_s.summary()})")
 
     # Tight crop / scan fallback: a side with (almost) no background
     # outside the card gives the standard scanners nothing to measure
@@ -331,7 +333,7 @@ def card_component_bbox(gray: np.ndarray):
     th = cv2.morphologyEx(th, cv2.MORPH_OPEN, np.ones((25, 25), np.uint8))
     n, labels, stats, _ = cv2.connectedComponentsWithStats(th)
     if n < 2:
-        raise RuntimeError("no card-candidate component found")
+        raise RuntimeError("nothing in this photo is shaped like a card")
     best, score = None, -1.0
     for i in range(1, n):
         x, y, w, h, a = stats[i]

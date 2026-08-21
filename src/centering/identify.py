@@ -424,27 +424,31 @@ def detect_card_id(front_photo, index_json: Path, images_dir: Optional[Path],
         if hits and hits[0][0] >= _STRONG_INLIERS:
             return result_from(
                 hits, "ocr+verify",
-                f"OCR read #{num}" + (f" set {sc}" if sc else "")
-                + f"; confirmed by render match ({hits[0][0]} inliers).")
+                f"Read the card number #{num}" + (f" (set {sc})" if sc else "")
+                + " off the photo, then confirmed it against the official "
+                + f"picture ({hits[0][0]} matching points).")
 
     # ---- strategy 2: image match against the render DB ----
     index = load_signature_index(sig_index_path)
     if index is None:
         return DetectionResult(
-            method="none", message="Could not auto-detect the card. Enter the "
-            "card ID manually (e.g. 8-210). (No signature index found - run "
-            "`python -m centering.identify` to build one.)")
+            method="none",
+            message="The list of known cards has not been built on this "
+                    "computer yet, so the card cannot be recognised "
+                    "automatically. Type the set and number instead, like "
+                    "8-210. (To build the list, a developer can run "
+                    "`python -m centering.identify`.)")
     shortlist = _prefilter(_signature(rgb, gray), index, top_k)
     hits = _verify_candidates(shortlist, kp1, des1, sift, images_dir, cache)
     if hits:
         return result_from(hits, "image-match",
-                           f"Matched to the render database "
-                           f"({hits[0][0]} inliers).")
+                           "Recognised from the official card pictures "
+                           f"({hits[0][0]} matching points).")
 
     return DetectionResult(
         method="none",
-        message="Could not confidently identify the card. Enter the card ID "
-                "manually (e.g. 8-210).")
+        message="This card could not be recognised from the photo. Type the "
+                "set and number instead, like 8-210.")
 
 
 if __name__ == "__main__":  # build the signature index

@@ -27,7 +27,7 @@ def test_cast_shadow_top_refuses_y_only():
     # Tramp 7:212 (IMG_6416): top edge on the cast shadow, x axis clean
     v = _render_span_violations(_off(0.295, 0.543, 2.238, 0.53), BOUNDS)
     assert set(v) == {"y"}
-    assert "top" in v["y"] and "span" in v["y"]
+    assert "top" in v["y"] and "together sit" in v["y"]
 
 
 def test_cut_inside_render_is_impossible():

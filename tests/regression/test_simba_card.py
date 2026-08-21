@@ -57,7 +57,7 @@ def result(tmp_path_factory):
 def _front_y_refused_by_span_gate(result):
     m = result.front.shift_mm["y"]
     return (m.status == "refused"
-            and "render-to-cut" in (m.refusal_reason or ""))
+            and "do not fit against the official" in (m.refusal_reason or ""))
 
 
 def test_back_face_is_env_stable(result):
@@ -82,7 +82,8 @@ def test_refusal_mode_is_flagged(result):
     if _front_y_refused_by_span_gate(result):
         codes = [q.code for q in result.front.qa]
         assert "RENDER_SPAN_MISMATCH" in codes
-        assert "layout-locked" in result.front.shift_mm["y"].refusal_reason
+        assert ("every real card falls between"
+                in result.front.shift_mm["y"].refusal_reason)
 
 
 def test_x_axis_cross_validation(result):
@@ -95,7 +96,7 @@ def test_x_axis_cross_validation(result):
     else:
         fx = result.front.shift_mm["x"]
         assert fx.status == "refused"
-        assert "render-to-cut" in (fx.refusal_reason or "")
+        assert "do not fit against the official" in (fx.refusal_reason or "")
 
 
 def test_vertical_artifact_never_masked(result):
@@ -130,4 +131,4 @@ def test_registration_y_exposes_or_refuses(result):
         assert 0.3 <= abs(m.value) <= 0.8
     else:
         assert _front_y_refused_by_span_gate(result)
-        assert "front y" in (m.refusal_reason or "")
+        assert "front's up-and-down" in (m.refusal_reason or "")

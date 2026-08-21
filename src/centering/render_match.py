@@ -41,20 +41,28 @@ def match_to_render(photo_gray: np.ndarray, render_gray: np.ndarray,
     kp1, des1 = sift.detectAndCompute(p8, photo_mask)
     kp2, des2 = sift.detectAndCompute(r8, None)
     if des1 is None or des2 is None or len(kp1) < 50 or len(kp2) < 50:
-        raise RuntimeError("insufficient SIFT features for render matching")
+        raise RuntimeError(
+            "There is not enough detail in this photo to match it against "
+            "the official picture of the card. Re-shoot it sharply in "
+            "focus, filling most of the frame, with even light.")
     bf = cv2.BFMatcher(cv2.NORM_L2)
     knn = bf.knnMatch(des1, des2, k=2)
     good = [m for m, n in knn if m.distance < ratio * n.distance]
     if len(good) < 30:
         raise RuntimeError(
-            f"only {len(good)} ratio-test matches; photo may not show this card "
-            "(check card id) or is too blurred/glared for feature matching")
+            f"Only {len(good)} points matched between your photo and the "
+            "official picture of the card. Either this is not that card - "
+            "check the card ID - or the photo is too blurred, or too washed "
+            "out by glare, to line up.")
     src = np.float32([kp1[m.queryIdx].pt for m in good]).reshape(-1, 1, 2)
     dst = np.float32([kp2[m.trainIdx].pt for m in good]).reshape(-1, 1, 2)
     cv2.setRNGSeed(20260703)
     H, inl = cv2.findHomography(src, dst, cv2.RANSAC, ransac_px)
     if H is None or inl is None or inl.sum() < 25:
-        raise RuntimeError("RANSAC homography failed or too few inliers")
+        raise RuntimeError(
+            "Your photo and the official picture of the card could not be "
+            "lined up. Check the card ID is right, then re-shoot sharply "
+            "in focus, square on, with even light.")
     inl = inl.ravel().astype(bool)
     proj = cv2.perspectiveTransform(src[inl], H).reshape(-1, 2)
     err = np.linalg.norm(proj - dst[inl].reshape(-1, 2), axis=1)

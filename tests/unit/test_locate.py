@@ -36,7 +36,7 @@ def test_coarse_locate_still_refuses_zero_contrast():
     assert ppm is None
     for s in ("left", "right", "top", "bottom"):
         assert sides[s].status == "failed"
-        assert "contrast" in sides[s].reason
+        assert "too alike" in sides[s].reason
 
 
 def test_card_component_bbox_dark_card_with_bright_artwork():

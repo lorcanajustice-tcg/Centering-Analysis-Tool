@@ -37,9 +37,10 @@ def analyze_back(photo: str | Path, game: GameSpec, out_dir: Optional[str] = Non
     if max(vals) > 1.8 * max(min(vals), 1e-6):
         qa.append(QAFlag(
             "BACKGROUND_NONUNIFORM",
-            "background brightness varies strongly across the frame "
-            f"({ {k: round(v) for k, v in corners.items()} }); texture contrast "
-            "and edge definition degrade in the bright/shadowed regions"))
+            "The background is much brighter in some corners than others "
+            f"(from {min(vals):.0f} to {max(vals):.0f} on a 0-255 "
+            "brightness scale). The card's edges are harder to pick out in "
+            "the brightest and the most shadowed parts."))
 
     # --- coarse localization ---
     # illumination-invariant colour planes for the chromaticity edge scan
@@ -51,11 +52,18 @@ def analyze_back(photo: str | Path, game: GameSpec, out_dir: Optional[str] = Non
         for s in _SIDES:
             res.edge_fits.append(EdgeFitReport(
                 edge=s, method="texture", status="refused",
-                notes=[coarse[s].reason or "coarse localization failed"]))
+                notes=[coarse[s].reason
+                       or "the card could not be found in this photo"]))
+        find_it = ("Shoot the card flat and unsleeved on plain white paper, "
+                   "filling most of the frame, with soft light from all "
+                   "sides. Then try again.")
         res.borders_mm = {s: Measurement.refused(
-            "mm", f"card not localized: {coarse[s].reason}") for s in _SIDES}
-        res.ratio_lr = Ratio.refused("LR", "card could not be localized in the photo")
-        res.ratio_tb = Ratio.refused("TB", "card could not be localized in the photo")
+            "mm", "The card could not be found in this photo - "
+            f"{coarse[s].reason}.", find_it) for s in _SIDES}
+        res.ratio_lr = Ratio.refused(
+            "LR", "The card could not be found in this photo.", find_it)
+        res.ratio_tb = Ratio.refused(
+            "TB", "The card could not be found in this photo.", find_it)
         res.tilt.corrected = False
         return res
 
@@ -117,8 +125,9 @@ def analyze_back(photo: str | Path, game: GameSpec, out_dir: Optional[str] = Non
         methods[side] = method
         if line is not None and line.bow_px and line.bow_px > 3.0:
             qa.append(QAFlag("CURL_SUSPECTED",
-                             f"{side} edge bows {line.bow_px:.1f}px over its span; "
-                             "foil curl biases border widths"))
+                             f"The {side} edge is not straight - it curves "
+                             f"by {line.bow_px:.1f} pixels along its length. "
+                             "A bent card makes its borders measure wrong."))
         lines[side], reports[side] = line, rep
         res.edge_fits.append(rep)
 
@@ -161,8 +170,9 @@ def analyze_back(photo: str | Path, game: GameSpec, out_dir: Optional[str] = Non
             res.tilt.focal_mm_equiv = f_eq
             res.tilt.pitch_deg, res.tilt.yaw_deg, res.tilt.total_deg = pitch, yaw, total
         else:
-            res.tilt.notes.append("focal self-calibration degenerate "
-                                  "(near fronto-parallel); keystone reported")
+            res.tilt.notes.append(
+                "the photo is square-on enough that the exact tilt angle "
+                "cannot be worked out, and no correction was needed")
         Hmm = G.homography_to_card(quad, game.card_w_mm, game.card_h_mm)
         res.corner_angles_deg = G.corner_angles(quad)
         wt = float(np.linalg.norm(quad[1] - quad[0]))
@@ -173,15 +183,19 @@ def analyze_back(photo: str | Path, game: GameSpec, out_dir: Optional[str] = Non
         nominal_aspect = game.card_h_mm / game.card_w_mm
         if abs(res.aspect_ratio_measured - nominal_aspect) / nominal_aspect > 0.012:
             qa.append(QAFlag("ASPECT_DEVIATION",
-                             f"measured H/W {res.aspect_ratio_measured:.4f} vs nominal "
-                             f"{nominal_aspect:.4f}; check for sleeve, curl or a "
-                             "mis-detected edge"))
+                             "The card came out the wrong shape: "
+                             f"{res.aspect_ratio_measured:.3f} times taller "
+                             "than it is wide, where a real card is "
+                             f"{nominal_aspect:.3f}. Check it is out of its "
+                             "sleeve and flat, and look at the overlay "
+                             "picture to see whether an edge was found in "
+                             "the wrong place."))
     else:
         res.tilt.corrected = False
         res.tilt.notes.append(
-            "full rectification unavailable (missing edges); perspective "
-            f"handled by per-row scale; span scale variation {wvar*100:.2f}% "
-            "bounds the residual effect")
+            "not all four edges were found, so tilt could only be partly "
+            f"corrected. The card's width changes by {wvar*100:.2f}% across "
+            "the photo, which is the most this can be affecting the result")
         if have_lr:
             res.tilt.keystone_h_pct = float(
                 (width_px[-1] - width_px[0]) / width_px.mean() * 100.0)
@@ -224,12 +238,11 @@ def analyze_back(photo: str | Path, game: GameSpec, out_dir: Optional[str] = Non
             # papered over with an uncertainty term that would be fiction.
             qa.append(QAFlag(
                 "FRAME_LINE_SPARSE",
-                f"{side} frame line fitted from {fline.n} of "
-                f"{fdiag.n_attempted} scan lines ({fdiag.summary()}); the "
-                "surviving lines are a biased subset of the printed line, so "
-                "this border may sit off by more than its quoted uncertainty "
-                "- re-run with a higher n_scans on a high-resolution capture "
-                "and compare",
+                f"The printed gold line along the {side} could only be "
+                f"traced in {fline.n} of {fdiag.n_attempted} places "
+                f"({fdiag.summary()}). The few spots it was found in are "
+                "not spread evenly along the line, so this border can be "
+                "further out than the plus-or-minus figure suggests.",
                 severity="warning"))
 
     # --- borders ---
@@ -245,11 +258,17 @@ def analyze_back(photo: str | Path, game: GameSpec, out_dir: Optional[str] = Non
             ed["frame_peak"] / ppm)
         if lines[side] is None:
             return Measurement.refused(
-                "mm", f"{side} card edge unmeasurable: "
-                f"{'; '.join(reports[side].notes) or 'edge scan failed'}")
+                "mm", f"The {side} edge of the card could not be measured: "
+                + ("; ".join(reports[side].notes)
+                   or "no edge was found there") + ".",
+                "Re-shoot on plain white paper with soft light from all "
+                "sides, so that every edge of the card stands out clearly.")
         if flines[side] is None:
             return Measurement.refused(
-                "mm", f"{side} frame line not detected inside search window")
+                "mm", "The printed gold line could not be found near the "
+                f"{side} edge.",
+                "Use a sharper, larger photo with even lighting - the gold "
+                "line is thin, and needs detail to pick out.")
         u0 = max(lines[side].u_range[0], flines[side].u_range[0])
         u1 = min(lines[side].u_range[1], flines[side].u_range[1])
         us = np.linspace(u0, u1, 60)
@@ -258,9 +277,10 @@ def analyze_back(photo: str | Path, game: GameSpec, out_dir: Optional[str] = Non
         if cov < 0.6:
             qa.append(QAFlag(
                 "PARTIAL_EDGE_SPAN",
-                f"{side} border measured over only {cov*100:.0f}% of the "
-                "scan span (weak background texture elsewhere); value "
-                "represents that region"))
+                f"The {side} border could only be measured along "
+                f"{cov*100:.0f}% of its length - the background was too "
+                "plain to read against anywhere else. The number given "
+                "describes that part of the border."))
         if Hmm is not None:
             f_mm = G.transform_points(Hmm, flines[side].points(60))
             ax = 0 if side in ("left", "right") else 1
@@ -286,9 +306,18 @@ def analyze_back(photo: str | Path, game: GameSpec, out_dir: Optional[str] = Non
 
     def ratio(first, second, axis) -> Ratio:
         a, b = res.borders_mm[first], res.borders_mm[second]
-        bad = [m for m in (a, b) if m.status != "measured"]
-        if bad:
-            return Ratio.refused(axis, "; ".join(m.refusal_reason for m in bad))
+        pairs = [(n, m) for n, m in ((first, a), (second, b))
+                 if m.status != "measured"]
+        if pairs:
+            # Name the borders that failed and let their own rows carry the
+            # detail - repeating two long reasons here reads as noise.
+            which = " and ".join(n for n, _ in pairs)
+            plural = "borders" if len(pairs) > 1 else "border"
+            return Ratio.refused(
+                axis, f"The {which} {plural} could not be measured, and "
+                "both are needed for this. See below for why.",
+                next((m.refusal_advice for _, m in pairs if m.refusal_advice),
+                     None))
         unc = compose_ratio_uncertainty(
             a.value, b.value,
             a.uncertainty.statistical, b.uncertainty.statistical,
@@ -312,12 +341,12 @@ def analyze_back(photo: str | Path, game: GameSpec, out_dir: Optional[str] = Non
         for s in _SIDES:
             m = res.borders_mm[s]
             txt.append(f"{s[0].upper()}:{m.value:.2f}mm" if m.status == "measured"
-                       else f"{s[0].upper()}:refused")
+                       else f"{s[0].upper()}:not measured")
         rl, rt = res.ratio_lr, res.ratio_tb
         ov.banner([
-            f"BACK L/R: {rl.display or 'refused'}"
+            f"BACK L/R: {rl.display or 'not measured'}"
             + (f" +-{rl.uncertainty_pts.total:.1f}pts" if rl.uncertainty_pts else ""),
-            f"     T/B: {rt.display or 'refused'}"
+            f"     T/B: {rt.display or 'not measured'}"
             + (f" +-{rt.uncertainty_pts.total:.1f}pts" if rt.uncertainty_pts else ""),
             "  ".join(txt)])
         out = Path(out_dir) if out_dir else Path(photo).parent

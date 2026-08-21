@@ -209,9 +209,12 @@ class LorcanaRenderSource:
             if len(hits) == 1:
                 return hits[0]
             raise CardNotFound(
-                f"{card_id}: {len(hits)} matches for promo lookup"
-                + (f" (variants: {[c.get('fullIdentifier') for c in hits[:5]]})"
-                   if hits else ""), n_matches=len(hits))
+                f"\"{card_id}\" matches {len(hits)} promo cards, so it is "
+                "not clear which one you mean"
+                + (f". Did you mean one of these? "
+                   f"{[c.get('fullIdentifier') for c in hits[:5]]}"
+                   if hits else ". Check the set and number."),
+                n_matches=len(hits))
         m = re.fullmatch(r"(\w+)\s*:\s*(\d+)", card_id.strip())
         if m:
             sc, num = m.group(1), int(m.group(2))
@@ -220,8 +223,8 @@ class LorcanaRenderSource:
             if len(hits) == 1:
                 return hits[0]
             raise CardNotFound(
-                f"{card_id}: {len(hits)} matches for set:number lookup",
-                n_matches=len(hits))
+                f"No single card matches \"{card_id}\" ({len(hits)} found). "
+                "Check the set and the card number.", n_matches=len(hits))
         # Unified "SET-NUMBER" form (hyphen): the set identifier is either a
         # set code (1-13, Q1, Q2) or a promo grouping (C2, P1, D23, ...).
         # Those two namespaces are disjoint, so the token is unambiguous:
@@ -240,18 +243,24 @@ class LorcanaRenderSource:
                 return ph[0]
             total = len(hits) + len(ph)
             raise CardNotFound(
-                f"{card_id}: {total} matches for set/grouping-number lookup"
-                + (f" (variants: {[c.get('fullIdentifier') for c in ph[:5]]})"
-                   if len(ph) > 1 else ""), n_matches=total)
+                f"No single card matches \"{card_id}\" ({total} found). "
+                "Check the set and the card number"
+                + (f". Did you mean one of these? "
+                   f"{[c.get('fullIdentifier') for c in ph[:5]]}"
+                   if len(ph) > 1 else "."), n_matches=total)
         q = card_id.strip().lower()
         hits = [c for c in cards
                 if q in f"{c.get('name','')} - {c.get('version','')}".lower()]
         if len(hits) == 1:
             return hits[0]
         raise CardNotFound(
-            f"{card_id!r}: {len(hits)} name matches"
-            + (f" (e.g. {[c.get('fullIdentifier') for c in hits[:5]]})"
-               if hits else ""), n_matches=len(hits))
+            (f"\"{card_id}\" matches {len(hits)} cards by name, so it is "
+             "not clear which one you mean. Did you mean one of these? "
+             f"{[c.get('fullIdentifier') for c in hits[:5]]}"
+             if hits else
+             f"No card matches \"{card_id}\". Type the set and number, "
+             "like 8-210, or more of the card's name."),
+            n_matches=len(hits))
 
     def resolve(self, card_id: str) -> dict:
         # 1) cached allCards.json
@@ -321,13 +330,16 @@ class LorcanaRenderSource:
                 return gray, rgb, lf, card
         url = (card.get("images") or {}).get("full") or card.get("url")
         if not url:
-            raise CardNotFound(f"{card_id}: no official render available "
-                               "(no URL in database, no local card_db image)")
+            raise CardNotFound(
+                f"There is no official picture available for {card_id}, so "
+                "the front cannot be measured. The back can still be "
+                "checked on its own.")
         p = self.cache.fetch(url, suffix=".img")
         buf = np.frombuffer(p.read_bytes(), np.uint8)
         bgr = cv2.imdecode(buf, cv2.IMREAD_COLOR)
         if bgr is None:
-            raise IOError(f"could not decode render from {url}")
+            raise IOError("The official picture of this card downloaded, but "
+                      "could not be opened. Try again in a moment.")
         rgb = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
         gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY).astype(np.float32)
         return gray, rgb, url, card

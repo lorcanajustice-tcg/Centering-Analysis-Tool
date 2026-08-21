@@ -1,10 +1,13 @@
-"""Local web UI for the centering analyzer.
+"""The little web page you use to check cards.
 
-Stdlib-only HTTP server (no Flask needed): serves web/index.html and an
-/api/analyze endpoint. Photos arrive as base64 JSON from the browser, results
-(JSON + full-res overlays) are saved under results/<timestamp>/.
+This runs a small web server on your own computer - nothing is sent
+anywhere except the one request that fetches the official picture of the
+card. It serves web/index.html, takes the photos you drop in, runs the
+measurement, and saves the results and the marked-up pictures into
+results/<date and time>/.
 
-Run:  python webapp.py   then open http://127.0.0.1:8737/
+To run it by hand:  python webapp.py   then open http://127.0.0.1:8737/
+(On Windows, double-click run_analyzer.bat instead.)
 """
 from __future__ import annotations
 
@@ -61,25 +64,30 @@ def run_analysis(payload: dict) -> dict:
         mb = tuple(float(v) for v in mb) if mb else None
         if mode == "back":
             if "back" not in paths:
-                raise ValueError("select a back photo")
+                raise ValueError("Add a photo of the back of the card.")
             res = analyze_back(paths["back"], LORCANA, out_dir=out_dir)
             faces = {"back": res}
             result = res.to_dict()
         elif mode == "front":
             if "front" not in paths:
-                raise ValueError("select a front photo")
+                raise ValueError("Add a photo of the front of the card.")
             if not card_id:
-                raise ValueError("card ID is required for a borderless front "
-                                 '(e.g. "6/C2", "7:69", or a unique card name)')
+                raise ValueError(
+                    "Say which card this is so the official picture can be "
+                    'looked up - for example "8-210", or part of the '
+                    "card's name.")
             res = analyze_borderless(paths["front"], card_id, LORCANA,
                                      out_dir=out_dir, manual_bbox=mb)
             faces = {"front": res}
             result = res.to_dict()
         elif mode == "card":
             if "back" not in paths or "front" not in paths:
-                raise ValueError("combined mode needs both photos")
+                raise ValueError("Checking the front and the back needs "
+                                 "both photos.")
             if not card_id:
-                raise ValueError("card ID is required for the front analysis")
+                raise ValueError(
+                    "Say which card this is so the official picture can be "
+                    'looked up - for example "8-210".')
             res = analyze_card(back_photo=paths["back"],
                                front_photo=paths["front"],
                                card_id=card_id, game=LORCANA, out_dir=out_dir,
@@ -87,7 +95,8 @@ def run_analysis(payload: dict) -> dict:
             faces = {"back": res.back, "front": res.front}
             result = res.to_dict()
         else:
-            raise ValueError(f"unknown mode {mode!r}")
+            raise ValueError("Choose front and back, back only, or front "
+                             "only.")
 
     (out_dir / "result.json").write_text(json.dumps(result, indent=2))
     overlays = {}
@@ -106,7 +115,8 @@ def run_detect(payload: dict) -> dict:
 
     ph = payload.get("photo") or {}
     if not ph.get("data"):
-        raise ValueError("no front photo provided for detection")
+        raise ValueError("No photo of the front was sent, so the card "
+                         "cannot be identified.")
     images_dir = ROOT / "card_db" / "images"
     with tempfile.TemporaryDirectory() as td:
         p = Path(td) / ("front_" + Path(ph.get("name") or "front").name)
@@ -126,7 +136,7 @@ def run_preview(payload: dict) -> dict:
     import cv2
     ph = payload.get("photo") or {}
     if not ph.get("data"):
-        raise ValueError("no photo provided for preview")
+        raise ValueError("No photo was sent to show.")
     with tempfile.TemporaryDirectory() as td:
         p = Path(td) / ("prev_" + Path(ph.get("name") or "img").name)
         p.write_bytes(base64.b64decode(ph["data"]))
@@ -138,7 +148,8 @@ def run_preview(payload: dict) -> dict:
         img = cv2.resize(img, (int(round(w * scale)), int(round(h * scale))))
     ok, buf = cv2.imencode(".jpg", img, [cv2.IMWRITE_JPEG_QUALITY, 85])
     if not ok:
-        raise ValueError("preview encode failed")
+        raise ValueError("That photo could not be opened. Try a JPG, PNG "
+                         "or HEIC file.")
     return {"preview": "data:image/jpeg;base64,"
             + base64.b64encode(buf).decode(),
             "width": w, "height": h}
@@ -184,15 +195,22 @@ class Handler(BaseHTTPRequestHandler):
                        "application/json")
         except Exception as e:
             traceback.print_exc()
+            # The person reading this is not a programmer: give them the
+            # plain sentence the code raised, and leave the technical
+            # traceback in the console window (printed just above).
             self._send(500, json.dumps(
-                {"error": f"{type(e).__name__}: {e}"}).encode(),
+                {"error": str(e) or "Something went wrong while checking "
+                 "this card. The details are in the black window this "
+                 "program opened."}).encode(),
                 "application/json")
 
 
 def main():
     srv = ThreadingHTTPServer(("127.0.0.1", PORT), Handler)
-    print(f"Centering Analyzer running at http://127.0.0.1:{PORT}/")
-    print("Close this window (or Ctrl+C) to stop.")
+    print(f"Card Centering Checker is running at http://127.0.0.1:{PORT}/")
+    print("Your browser should open on its own. If not, copy that address")
+    print("into your browser.")
+    print("Close this window when you are finished.")
     try:
         srv.serve_forever()
     except KeyboardInterrupt:

@@ -142,7 +142,8 @@ def test_front_dark_refuses(fronts):
     flags = [f.code for f in r.qa]
     assert ("ASPECT_DEVIATION" in flags
             or "RENDER_SPAN_MISMATCH" in flags
-            or "unmeasurable" in reason or "implausible" in reason)
+            or "could not be measured" in reason
+            or "do not fit against the official" in reason)
     assert r.equivalent_ratio_lr.status == "refused"
 
 

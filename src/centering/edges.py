@@ -31,6 +31,8 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
+from .plain import reject_phrase
+
 
 @dataclass
 class ScanDiagnostics:
@@ -52,8 +54,11 @@ class ScanDiagnostics:
         self.n_snapped += 1
 
     def summary(self) -> str:
-        parts = [f"{v}x {k}" for k, v in sorted(self.reject_reasons.items())]
-        return ", ".join(parts) if parts else "none"
+        """Plain-words account of why scan lines were thrown away."""
+        parts = [f"{v} because {reject_phrase(k)}"
+                 for k, v in sorted(self.reject_reasons.items(),
+                                    key=lambda kv: -kv[1])]
+        return "; ".join(parts) if parts else "none"
 
 
 def _profile_band(gray: np.ndarray, side: str, u: float, lo: float, hi: float,
@@ -574,7 +579,8 @@ def cut_scan(gray: np.ndarray, side: str, anchor, scan_us: np.ndarray,
     n = len(offs)
     k0 = max(6, int((plateau_mm + win_in_mm) * ppm / step))
     if n < 24 or k0 >= n - 10:
-        raise ValueError("cut_scan window too small for plateau/search config")
+        raise ValueError("The area searched for this edge is too small to "
+                         "read anything from.")
     H, W = gray.shape
     us, vs = [], []
     diag = ScanDiagnostics()

@@ -67,10 +67,11 @@ def rescue_edge(gray, side, u_det, v_det, us_grid, ppm):
     v_det = np.asarray(v_det, dtype=float)
     us_grid = np.asarray(us_grid, dtype=float)
     if len(u_det) < MIN_POINTS:
-        return None, f"only {len(u_det)} raw detections (need >= {MIN_POINTS})"
+        return None, (f"only {len(u_det)} usable readings along that edge, "
+                      f"and at least {MIN_POINTS} are needed")
     span_ref = float(us_grid.max() - us_grid.min())
     if span_ref <= 0 or not ppm:
-        return None, "degenerate scan grid"
+        return None, "the search area was too small to work with"
     gap_px = max(4.0, 0.15 * ppm)
     orientation = "v" if side in ("left", "right") else "h"
     cands = []
@@ -85,29 +86,29 @@ def rescue_edge(gray, side, u_det, v_det, us_grid, ppm):
             continue
         cands.append((line, len(cu), span))
     if not cands:
-        return None, (f"no internally consistent cluster among {len(u_det)} "
-                      f"detections (need >= {MIN_POINTS} points, span >= "
-                      f"{MIN_SPAN_FRAC:.0%}, rms <= {FIT_RMS_MAX_PX}px)")
+        return None, (f"none of the {len(u_det)} readings line up well "
+                      "enough to be a card edge")
     survivors = []
     for line, ncl, span in cands:
         d = _hybrid_cross_check(gray, side, line, us_grid, ppm)
         if d is not None and abs(d) <= HYBRID_AGREE_MM:
             survivors.append((line, ncl, span, d))
     if not survivors:
-        return None, (f"hybrid cut cross-check confirms none of {len(cands)} "
-                      "candidate cluster(s)")
+        return None, (f"a second, independent check disagreed with all "
+                      f"{len(cands)} possible edge positions")
     if len(survivors) > 1:
         mid = float(np.median(us_grid))
         vs_mid = [float(s[0].v_at(mid)) for s in survivors]
         if (max(vs_mid) - min(vs_mid)) / ppm > HYBRID_AGREE_MM:
-            return None, (f"{len(survivors)} well-separated clusters each "
-                          "pass the hybrid cross-check; ambiguous")
+            return None, (f"{len(survivors)} different positions each look "
+                          "like the card edge, so there is no way to tell "
+                          "which one it is")
         survivors.sort(key=lambda s: -s[1])
     line, ncl, span, d = survivors[0]
     lever = (line.rms / max(math.sqrt(line.n), 1.0)) / ppm / max(span, 1e-6)
     extra = math.sqrt(BASE_SYSTEMATIC_MM ** 2 + d ** 2 + lever ** 2)
-    note = (f"estimated from a {ncl}-point cluster of {len(u_det)} raw "
-            f"detections (span {span:.0%}, rms {line.rms:.2f}px); hybrid "
-            f"cut cross-check agrees within {abs(d):.2f}mm; extra "
-            f"systematic +-{extra:.2f}mm")
+    note = (f"estimated from {ncl} of {len(u_det)} readings, covering "
+            f"{span:.0%} of the edge; a second check agrees to within "
+            f"{abs(d):.2f}mm, and an extra {extra:.2f}mm has been added to "
+            "the margin of error")
     return EdgeEstimate(line, extra, note), ""

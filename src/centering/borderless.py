@@ -35,6 +35,10 @@ from .uncertainty import compose_ratio_uncertainty
 
 _SIDES = ("left", "right", "top", "bottom")
 
+# The advice given whenever a photo simply is not good enough to measure.
+RESHOOT = ("Re-shoot the card flat and unsleeved on plain white paper, with "
+           "soft light coming from all sides, and try again.")
+
 # NOTE (2026-07-03): the render crop is NOT symmetric about the print
 # centre vertically. Per-axis bias and its systematic uncertainty now come
 # from GameSpec.render_crop_bias_mm / render_crop_bias_unc_mm (calibrated;
@@ -60,12 +64,15 @@ def _render_span_violations(offsets_mm: dict, bounds: dict) -> dict:
         oa = offsets_mm[f"{a}_outside_render"]
         ob = offsets_mm[f"{b}_outside_render"]
         t_lo, t_hi = bounds[f"{ax}_total"]
-        probs = [f"{n} edge sits {v:+.2f}mm outside the render bound "
-                 f"(plausible {s_lo:+.2f}..{s_hi:+.2f}mm)"
+        probs = [f"the {n} edge sits {v:+.2f}mm outside the official "
+                 f"picture, where every real card falls between "
+                 f"{s_lo:+.2f} and {s_hi:+.2f}mm"
                  for n, v in ((a, oa), (b, ob)) if not s_lo <= v <= s_hi]
         if not t_lo <= oa + ob <= t_hi:
-            probs.append(f"{a}+{b} render-to-cut span {oa + ob:.2f}mm vs "
-                         f"layout-locked {t_lo:.2f}..{t_hi:.2f}mm")
+            probs.append(f"the {a} and {b} edges together sit "
+                         f"{oa + ob:.2f}mm outside the official picture, "
+                         f"where every real card falls between {t_lo:.2f} "
+                         f"and {t_hi:.2f}mm")
         if probs:
             out[ax] = "; ".join(probs)
     return out
@@ -99,14 +106,15 @@ def analyze_borderless(photo: str | Path, card_id: str, game: GameSpec,
         # box is approximate, so the fine search window is widened.
         x0, y0, x1, y1 = (int(round(float(v))) for v in manual_bbox)
         if not (0 <= x0 < x1 <= Wimg and 0 <= y0 < y1 <= Himg):
-            raise ValueError(f"manual card box {manual_bbox} lies "
-                             f"outside the {Wimg}x{Himg} photo")
+            raise ValueError("The box you drew falls outside the photo. "
+                             "Draw it again, inside the picture.")
         seed_slop_mm = 3.5
         qa.append(QAFlag(
             "MANUAL_LOCALIZATION",
-            "card position was seeded manually (drag-box); automatic "
-            "localization bypassed. Fine edge scans, refusal gates and "
-            "the estimate tier are unchanged", severity="info"))
+            "You drew the box that says where the card is. That only tells "
+            "the analyser where to look - the measuring, the checks and "
+            "the accuracy are all exactly the same as normal.",
+            severity="info"))
     else:
         try:
             x0, y0, x1, y1 = card_component_bbox(gray)
@@ -115,11 +123,12 @@ def analyze_borderless(photo: str | Path, card_id: str, game: GameSpec,
             bad = [s for s in _SIDES if coarse[s].pos is None]
             if bad:
                 raise RuntimeError(
-                    f"card could not be localized: component segmentation "
-                    f"failed ({err}); per-side coarse scans failed for "
-                    + "; ".join(f"{s}: {coarse[s].reason}" for s in bad)
-                    + ". You can seed the card position manually "
-                    "(drag a box over the card) to bypass this step"
+                    "The card could not be found in this photo. "
+                    + " ".join(f"On the {s} edge, {coarse[s].reason}."
+                               for s in bad)
+                    + " Try again on plain white paper with soft, even "
+                    "light - or use \"Mark the card position\" below to "
+                    "draw a box around the card yourself."
                     ) from err
             x0, y0 = int(coarse["left"].pos), int(coarse["top"].pos)
             x1, y1 = int(coarse["right"].pos), int(coarse["bottom"].pos)
@@ -137,9 +146,11 @@ def analyze_borderless(photo: str | Path, card_id: str, game: GameSpec,
     vals = list(corners_bg.values())
     if max(vals) > 1.8 * max(min(vals), 1e-6):
         qa.append(QAFlag("BACKGROUND_NONUNIFORM",
-                         "background brightness varies strongly across the "
-                         "frame; low-contrast regions are excluded from edge "
-                         "scans"))
+                         "The background is much brighter in some corners "
+                         f"than others (from {min(vals):.0f} to "
+                         f"{max(vals):.0f} on a 0-255 brightness scale). "
+                         "The parts of each edge that fall in the brightest "
+                         "or darkest areas were skipped."))
 
     # --- physical edges: sub-pixel brightness step ---
     rows = np.linspace(y0 + 0.15 * (y1 - y0), y0 + 0.85 * (y1 - y0), n_scans)
@@ -188,7 +199,8 @@ def analyze_borderless(photo: str | Path, card_id: str, game: GameSpec,
                     continue
                 est, why = rescue_edge(gray, side, uu, vv, us, ppm0)
                 if est is None:
-                    rep.notes.append(f"estimate tier ({mname}): {why}")
+                    rep.notes.append(f"tried to estimate it instead, but "
+                                     f"{why}")
                     continue
                 line = est.line
                 rep = EdgeFitReport(
@@ -197,29 +209,36 @@ def analyze_borderless(photo: str | Path, card_id: str, game: GameSpec,
                     rms_residual_px=line.rms,
                     angle_deg=line.angle_from_nominal_deg(),
                     bow_px=line.bow_px, status="estimated",
-                    notes=[f"strict tier refused: {strict_notes}",
-                           est.note])
+                    notes=[f"could not be measured properly: "
+                           f"{strict_notes}", est.note])
                 methods[side] = mname
                 est_extra[side] = est.extra_unc_mm
                 qa.append(QAFlag(
                     "EDGE_ESTIMATED",
-                    f"{side} edge is an estimate-tier rescue ({mname}): "
-                    f"{est.note}"))
+                    f"The {side} edge was too unclear to measure properly, "
+                    f"so it has been estimated instead: {est.note}. The "
+                    "result is marked with a squiggle and carries a bigger "
+                    "margin of error to match."))
                 break
         if line is not None and line.bow_px and line.bow_px > 3.0:
             qa.append(QAFlag("CURL_SUSPECTED",
-                             f"{side} edge bows {line.bow_px:.1f}px over its "
-                             "span; foil curl biases the measured cut position"))
+                             f"The {side} edge is not straight - it curves "
+                             f"by {line.bow_px:.1f} pixels along its "
+                             "length. A bent card makes its edge measure in "
+                             "the wrong place."))
         if diag.n_ok and diag.n_ok < 0.7 * diag.n_attempted:
             qa.append(QAFlag("EDGE_PARTIALLY_EXCLUDED",
-                             f"{side} edge: {diag.n_attempted - diag.n_ok}/"
-                             f"{diag.n_attempted} scan lines excluded "
-                             f"({diag.summary()}); fit uses the clean regions"))
+                             f"On the {side} edge, "
+                             f"{diag.n_attempted - diag.n_ok} of "
+                             f"{diag.n_attempted} readings had to be thrown "
+                             f"out ({diag.summary()}). The measurement uses "
+                             "the clean stretches only."))
         lines[side], reports[side] = line, rep
         res.edge_fits.append(rep)
 
     _frame_proximity_qa(qa, lines, Wimg, Himg,
-                        extra=" (seen at the 0.1mm level in validation)")
+                        extra=" In testing this moved results by about "
+                              "0.1mm.")
 
     missing = [s for s in _SIDES if lines[s] is None]
     if missing:
@@ -227,16 +246,21 @@ def analyze_borderless(photo: str | Path, card_id: str, game: GameSpec,
             bad = [s for s in (a, b) if lines[s] is None]
             if bad:
                 res.shift_mm[ax] = Measurement.refused(
-                    "mm", "; ".join(
-                        f"{s} edge unmeasurable: "
-                        f"{'; '.join(reports[s].notes)}" for s in bad))
+                    "mm", " ".join(
+                        f"The {s} edge of the card could not be measured: "
+                        f"{'; '.join(reports[s].notes)}." for s in bad),
+                    RESHOOT)
             else:
                 res.shift_mm[ax] = Measurement.refused(
-                    "mm", f"{a}/{b} edges measured, but render alignment "
-                    "requires the full physical quad "
-                    f"({', '.join(missing)} unmeasurable)")
-        res.equivalent_ratio_lr = Ratio.refused("LR", "physical edges incomplete")
-        res.equivalent_ratio_tb = Ratio.refused("TB", "physical edges incomplete")
+                    "mm", f"The {a} and {b} edges were found, but all four "
+                    "edges are needed to line the card up against the "
+                    f"official picture, and the "
+                    f"{' and '.join(missing)} could not be measured.",
+                    RESHOOT)
+        res.equivalent_ratio_lr = Ratio.refused(
+            "LR", "Not all four edges of the card could be found.", RESHOOT)
+        res.equivalent_ratio_tb = Ratio.refused(
+            "TB", "Not all four edges of the card could be found.", RESHOOT)
         res.tilt.corrected = False
         return res
 
@@ -252,8 +276,9 @@ def analyze_borderless(photo: str | Path, card_id: str, game: GameSpec,
         res.tilt.focal_mm_equiv = f_eq
         res.tilt.pitch_deg, res.tilt.yaw_deg, res.tilt.total_deg = pitch, yaw, total
     else:
-        res.tilt.notes.append("focal self-calibration degenerate "
-                              "(near fronto-parallel); keystone reported")
+        res.tilt.notes.append(
+            "the photo is square-on enough that the exact tilt angle "
+            "cannot be worked out, and no correction was needed")
     res.corner_angles_deg = G.corner_angles(quad)
     wt = float(np.linalg.norm(quad[1] - quad[0]))
     wb = float(np.linalg.norm(quad[2] - quad[3]))
@@ -264,9 +289,13 @@ def analyze_borderless(photo: str | Path, card_id: str, game: GameSpec,
     aspect_dev = abs(res.aspect_ratio_measured - nominal_aspect) / nominal_aspect
     if aspect_dev > 0.012:
         qa.append(QAFlag("ASPECT_DEVIATION",
-                         f"measured H/W {res.aspect_ratio_measured:.4f} vs "
-                         f"nominal {nominal_aspect:.4f}; check for sleeve, "
-                         "curl or a mis-detected edge"))
+                         "The card came out the wrong shape: "
+                         f"{res.aspect_ratio_measured:.3f} times taller "
+                         "than it is wide, where a real card is "
+                         f"{nominal_aspect:.3f}. Check it is out of its "
+                         "sleeve and flat, and look at the overlay picture "
+                         "to see whether an edge was found in the wrong "
+                         "place."))
     width_px = lines["right"].v_at(rows) - lines["left"].v_at(rows)
     inp.px_per_mm = float(np.median(width_px)) / game.card_w_mm
     wvar = float((width_px.max() - width_px.min()) / width_px.mean())
@@ -275,15 +304,17 @@ def analyze_borderless(photo: str | Path, card_id: str, game: GameSpec,
     # one edge latched onto glare/shadow/artwork; any shift computed from it
     # would be silently wrong, so refuse rather than estimate ---
     if aspect_dev > 0.03:
-        reason = (f"measured quad H/W {res.aspect_ratio_measured:.4f} deviates "
-                  f"{aspect_dev * 100:.1f}% from nominal {nominal_aspect:.4f}; "
-                  "at least one edge is grossly mis-detected (glare band, "
-                  "shadow or artwork boundary); refusing rather than "
-                  "reporting a biased print shift")
-        res.shift_mm = {"x": Measurement.refused("mm", reason),
-                        "y": Measurement.refused("mm", reason)}
-        res.equivalent_ratio_lr = Ratio.refused("LR", reason)
-        res.equivalent_ratio_tb = Ratio.refused("TB", reason)
+        reason = (f"The shape found is {aspect_dev * 100:.1f}% off a real "
+                  f"card's shape ({res.aspect_ratio_measured:.3f} tall for "
+                  f"every 1 across, against {nominal_aspect:.3f}). At least "
+                  "one edge has been found badly wrong - usually a band of "
+                  "glare, a shadow, or the edge of the artwork being "
+                  "mistaken for the edge of the card. No number is given, "
+                  "rather than a wrong one.")
+        res.shift_mm = {"x": Measurement.refused("mm", reason, RESHOOT),
+                        "y": Measurement.refused("mm", reason, RESHOOT)}
+        res.equivalent_ratio_lr = Ratio.refused("LR", reason, RESHOOT)
+        res.equivalent_ratio_tb = Ratio.refused("TB", reason, RESHOOT)
         return res
 
     # --- hybrid cut cross-check (shadow-band detection; QA only) ---
@@ -304,12 +335,15 @@ def analyze_borderless(photo: str | Path, card_id: str, game: GameSpec,
         notes=[f"card: {card.get('fullIdentifier', card_id)}"])
     if n_inl < 200:
         qa.append(QAFlag("WEAK_RENDER_MATCH",
-                         f"only {n_inl} RANSAC inliers (expect 600-800); "
-                         "alignment may be unreliable", severity="warning"))
+                         f"Only {n_inl} points could be matched between "
+                         "your photo and the official card picture, where "
+                         "a good match finds 600 to 800. The two may not be "
+                         "lined up correctly.", severity="warning"))
     if med_err > 2.0:
         qa.append(QAFlag("HIGH_REPROJECTION_ERROR",
-                         f"median reprojection {med_err:.2f}px in render space "
-                         "(expect ~1px)"))
+                         "Your photo and the official card picture line up "
+                         f"to about {med_err:.1f} pixels, where 1 pixel is "
+                         "normal. The alignment is loose."))
 
     # --- map physical edges into render space ---
     rlines = {}
@@ -340,9 +374,12 @@ def analyze_borderless(photo: str | Path, card_id: str, game: GameSpec,
         for ax, why in sorted(span_bad.items()):
             qa.append(QAFlag(
                 "RENDER_SPAN_MISMATCH",
-                f"{why}; the fitted quad cannot be the physical cut on this "
-                f"axis (an edge scan latched onto a cast shadow, curl or "
-                f"glare) - refusing the {ax} print shift",
+                f"Compared with the official card picture, {why}. That "
+                "cannot be where the card was really cut, so no "
+                + ("left-to-right" if ax == "x" else "top-to-bottom")
+                + " print position is given. Something along that edge - a "
+                "shadow, a band of glare, or a curled corner - was "
+                "mistaken for the edge of the card.",
                 severity="warning"))
 
     # shift of print relative to card: positive x = print displaced toward
@@ -359,9 +396,11 @@ def analyze_borderless(photo: str | Path, card_id: str, game: GameSpec,
     if bias["x"] or bias["y"]:
         res.qa.append(QAFlag(
             "RENDER_CROP_BIAS_CORRECTED",
-            f"calibrated render-crop bias subtracted from the raw shift "
-            f"(x {bias['x']:+.2f}mm, y {bias['y']:+.2f}mm; systematic "
-            f"+-{bias_unc['y']:.2f}mm retained in the uncertainty)",
+            "The official card picture is cropped very slightly "
+            "off-centre, by a known amount. That has been taken off the "
+            f"result ({bias['x']:+.2f}mm across, {bias['y']:+.2f}mm down), "
+            f"and the {bias_unc['y']:.2f}mm of doubt left over is included "
+            "in the plus-or-minus figure.",
             severity="info"))
 
     def shift_unc(a_side, b_side) -> Uncertainty:
@@ -395,8 +434,9 @@ def analyze_borderless(photo: str | Path, card_id: str, game: GameSpec,
     }
     for ax in span_bad:
         res.shift_mm[ax] = Measurement.refused(
-            "mm", "physically implausible render-to-cut geometry: "
-            + span_bad[ax])
+            "mm", "The card edges found do not fit against the official "
+            "card picture: " + span_bad[ax] + ". At least one edge is in "
+            "the wrong place.", RESHOOT)
 
     # --- estimate tier: label and cap ---
     for ax, (a, b) in (("x", ("left", "right")), ("y", ("top", "bottom"))):
@@ -409,9 +449,12 @@ def analyze_borderless(photo: str | Path, card_id: str, game: GameSpec,
         which = "/".join(s for s in (a, b) if s in est_extra)
         if tot > CAP_MM:
             res.shift_mm[ax] = Measurement.refused(
-                "mm", f"estimate-tier uncertainty +-{tot:.2f}mm exceeds "
-                f"the +-{CAP_MM:.1f}mm cap ({which} edge estimated); a "
-                "cleaner capture is needed for a grading-relevant number")
+                "mm", f"The {which} edge could only be estimated, and the "
+                f"estimate is good to no better than {tot:.2f}mm - past "
+                f"the {CAP_MM:.1f}mm limit for a number worth quoting.",
+                "A cleaner photo usually fixes this: card flat and "
+                "unsleeved on plain white paper, soft light from all "
+                "sides, sharply in focus.")
         else:
             m.status = "estimated"
 
@@ -421,8 +464,10 @@ def analyze_borderless(photo: str | Path, card_id: str, game: GameSpec,
         a = total_margin / 2.0 + shift  # left/top border equivalent
         b = total_margin / 2.0 - shift
         if a <= 0 or b <= 0:
-            return Ratio.refused(axis, "shift exceeds the nominal margin; "
-                                 "equivalence convention breaks down")
+            return Ratio.refused(
+                axis, "The print is shifted further than a normal border "
+                "is wide, so a centring ratio would not mean anything "
+                "here. Use the millimetre figure instead.")
         m = res.shift_mm["x" if axis == "LR" else "y"]
         s = m.uncertainty
         # d(pct)/d(shift) = 100 * 2 /? : pct = 100*a/(a+b), a+b const => 100/total
@@ -434,11 +479,13 @@ def analyze_borderless(photo: str | Path, card_id: str, game: GameSpec,
                      uncertainty_pts=unc, status=m.status)
 
     res.equivalent_ratio_lr = (
-        Ratio.refused("LR", res.shift_mm["x"].refusal_reason)
+        Ratio.refused("LR", res.shift_mm["x"].refusal_reason,
+                      res.shift_mm["x"].refusal_advice)
         if res.shift_mm["x"].status == "refused"
         else equiv("LR", shift_x, game.equiv_margin_lr_mm))
     res.equivalent_ratio_tb = (
-        Ratio.refused("TB", res.shift_mm["y"].refusal_reason)
+        Ratio.refused("TB", res.shift_mm["y"].refusal_reason,
+                      res.shift_mm["y"].refusal_advice)
         if res.shift_mm["y"].status == "refused"
         else equiv("TB", shift_y, game.equiv_margin_tb_mm))
 
@@ -456,15 +503,16 @@ def analyze_borderless(photo: str | Path, card_id: str, game: GameSpec,
 
         def _fmt(m):
             if m.value is None:
-                return "refused"
+                return "not measured"
             pre = "~" if m.status == "estimated" else ""
             return f"{pre}{m.value:+.2f}mm"
         ov.banner([
             f"FRONT print shift: x {_fmt(sx)}  y {_fmt(sy)}",
-            f"(+x = print toward right edge, +y = toward bottom)",
-            f"equiv L/R {res.equivalent_ratio_lr.display or 'refused'}  "
-            f"T/B {res.equivalent_ratio_tb.display or 'refused'}",
-            f"render match: {n_inl} inliers, {med_err:.2f}px reproj"])
+            f"(+x = print sits toward the right edge, +y = toward bottom)",
+            f"same as L/R {res.equivalent_ratio_lr.display or 'not measured'}"
+            f"  T/B {res.equivalent_ratio_tb.display or 'not measured'}",
+            f"matched to official picture: {n_inl} points, "
+            f"{med_err:.2f}px apart"])
         out = Path(out_dir) if out_dir else Path(photo).parent
         out.mkdir(parents=True, exist_ok=True)
         res.overlay = ov.save(out / (Path(photo).stem + "_front_overlay.jpg"))

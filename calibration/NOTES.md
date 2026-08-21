@@ -1,13 +1,37 @@
-# Render-crop bias calibration notes (2026-07-03)
+# How the official-picture offset was measured
 
-## The problem
+## In plain English
+
+The front of a full-art card has no borders to measure, so the program
+compares your photo against Ravensburger's official picture of that card
+and works out how far the printing sits off centre.
+
+That only works if you know exactly how the official picture is cropped.
+It turned out not to be cropped evenly: a little more is taken off the top
+than off the bottom. Until that was spotted, front top/bottom readings came
+out badly wrong — one card read 62/38 on the front while its own back read
+50/50.
+
+The fix is a single correction figure per game and per direction, because
+the crop is identical on every card. This file is the record of measuring
+it: the first attempt, why it was contaminated by shadows, and the cleaner
+re-measurement that replaced it. The number in use now is
+`render_crop_bias_mm` in `games/lorcana.py`.
+
+The sections below are the working notes and stay technical.
+
+---
+
+# First attempt (2026-07-03)
+
+## What went wrong
 
 Full-art (borderless) front T/B centering was wildly off: Simba - Pride
 Protector 8/C2 read equiv T/B 62/38 while its back read ~50/50, implying a
 front-back print registration of -0.72mm. Implausible: x-registration on
 the same card measured 0.009mm.
 
-## Root cause
+## Why
 
 The borderless pipeline assumed the official render is cropped
 symmetrically about the print centre. That assumption was only ever
@@ -38,7 +62,7 @@ Ravensburger renders (1468x2048) are cropped ~1.15mm total in width
    cut). Its back was therefore never really 50/50 either. Treated as a
    compromised measurement, not as evidence for a second crop constant.
 
-## What changed in the code
+## What was changed in the code
 
 - GameSpec gains render_crop_bias_mm / render_crop_bias_unc_mm.
 - LORCANA: bias y = +0.20mm (unc 0.20, kept honest until more clean pairs
@@ -48,7 +72,7 @@ Ravensburger renders (1468x2048) are cropped ~1.15mm total in width
   uncertainty, and emits QA flag RENDER_CROP_BIAS_CORRECTED.
 - New regression fixture: Simba 8/C2 pair (tests/regression/test_simba_card.py).
 
-## Known residual issues / next steps
+## What was still unresolved
 
 1. Shadow-band edge artifact (~0.5-0.7mm, worst on dark textured mats with
    directional light): step_scan can lock onto the outer shadow boundary,
@@ -73,9 +97,9 @@ Ravensburger renders (1468x2048) are cropped ~1.15mm total in width
 
 ---
 
-# Recalibration under the improved protocol (2026-07-06)
+# Re-measured properly (2026-07-06)
 
-## Data
+## The photos used
 
 Five front+back pairs on WHITE paper, diffuse light (IMG_6397/98 Gadget
 12:147; IMG_6403/04 Julieta 12:24; IMG_6405/06 Dangerous Plan 12:133;
@@ -84,7 +108,7 @@ Measured with the library pipelines themselves (polarity-agnostic
 detectors, zero-bias GameSpec for the fronts) - NOT the v1/v2 prototype
 script. Per-pair numbers: reshoot_2026_07_06.json.
 
-## Flip convention (established, was an unstated assumption)
+## Which way round the two faces compare (previously just assumed)
 
 Back photos are related to front photos by a VERTICAL-AXIS flip: L/R
 mirrors, T/B does not (card_report.py's assumption - now confirmed).
@@ -94,7 +118,7 @@ direction (registration 0.09 / 0.02mm); the mirrored hypothesis would
 imply ~0.8mm registrations. All five back photos share one orientation
 (SIFT rotation check, +-2 deg).
 
-## Result
+## The answer
 
 bias_y = mean(front_raw_y - back_derived_y) = -0.08 +- 0.07 (sem),
 card scatter +-0.16. CONSISTENT WITH ZERO. Standard-frame-only subset:
@@ -113,7 +137,7 @@ manufacture-constant to 20 microns - and T+B 4.305 +- 0.078. GameSpec
 updated to 4.78 / 4.31 (old 4.76 / 4.6; the 4.6 T/B figure was
 shadow-inflated).
 
-## Why this supersedes the 2026-07-03 value (+0.18 +- 0.06)
+## Why this replaces the first attempt's +0.18 +- 0.06
 
 The old shoot was dark-desk with detectors since shown vulnerable to the
 shadow-band artifact, whose mechanism (directional light displacing
@@ -128,7 +152,7 @@ i.e. the pair's documented ~0.5mm artifact is VISIBLE instead of being
 half-masked by a bias constant that had absorbed the same artifact.
 test_simba_card.py now regression-tests exactly that behaviour.
 
-## Caveat (documented, accepted)
+## The one caveat, accepted
 
 The pair estimator cannot separate the render-crop asymmetry from any
 off-centre of the printed back frame (delta_frame): the constant is

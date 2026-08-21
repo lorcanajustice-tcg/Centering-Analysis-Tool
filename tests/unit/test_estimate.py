@@ -50,7 +50,7 @@ def test_too_few_points_refused():
     est, why = ET.rescue_edge(g, "left", np.array([400.0, 500.0]),
                               np.array([150.0, 150.2]), US, PPM)
     assert est is None
-    assert "detections" in why
+    assert "usable readings" in why
 
 
 def test_short_span_refused():
@@ -67,7 +67,7 @@ def test_no_image_support_refused():
     u, v = det_cluster(150.0)
     est, why = ET.rescue_edge(g, "left", u, v, US, PPM)
     assert est is None
-    assert "hybrid" in why
+    assert "second, independent check" in why
 
 
 def test_scattered_detections_refused():
