@@ -87,6 +87,27 @@ If a shot has problems, the report says so via QA flags (e.g.
 caution flags can't catch: a perfect-fit sleeve edge can masquerade as the
 card edge (±0.3mm) - always shoot unsleeved.
 
+## Scans and tightly cropped images
+
+Images where the card fills the frame also work: flatbed scans, and the
+per-face exports grading services include with a report, which are cropped
+to the card and padded with a thin band of flat colour. You do not need to
+add background or tell the analyzer anything - it detects that the card
+nearly fills the frame and localizes from the image border instead, then
+measures exactly as it would on a photo. Such images get one `TIGHT_CROP`
+note in place of the four `RADIAL_DISTORTION_RISK` warnings a framed photo
+would earn for the same geometry.
+
+Two things to know:
+
+- A card cropped flush to the image edge, with no surround at all, cannot
+  be measured - the cut edge has to be visible as an edge. A millimetre of
+  margin is plenty.
+- Very large images are handled, but the render match for borderless
+  faces runs on a downscaled copy above ~4100px on the long edge (the
+  match is limited by the render's own resolution, not the photo's). The
+  edge measurements always use full resolution.
+
 ## Card imagery & licensing
 
 The MIT license covers the code in this repository only. Card artwork,

@@ -19,7 +19,8 @@ from .uncertainty import border_stat_sigma_px, compose_ratio_uncertainty
 # shared fit/gate machinery lives in fitting.py; re-exported here for
 # backward compatibility (historical import site)
 from .fitting import (SHADOW_BAND_MM, _edge_report,  # noqa: F401
-                      _hybrid_cross_check, _shadow_band_qa)
+                      _frame_proximity_qa, _hybrid_cross_check, _prefer_fit,
+                      _shadow_band_qa, _thin_fit)
 
 _SIDES = ("left", "right", "top", "bottom")
 
@@ -78,10 +79,14 @@ def analyze_back(photo: str | Path, game: GameSpec, out_dir: Optional[str] = Non
             continue
         us = rows if side in ("left", "right") else cols
 
-        def _fine(method, side=side, us=us):
+        slop = coarse[side].slop_mm
+        out_mm = slop if slop is not None else 6.0
+        in_mm = slop if slop is not None else 3.0
+
+        def _fine(method, side=side, us=us, out_mm=out_mm, in_mm=in_mm):
             fn = E.step_scan if method == "step" else E.texture_scan
             return fn(gray, side, coarse[side].pos, us,
-                      search_out_px=6.0 * ppm0, search_in_px=3.0 * ppm0)
+                      search_out_px=out_mm * ppm0, search_in_px=in_mm * ppm0)
 
         # prefer the scanner that established the coarse position; on
         # smooth light backgrounds that is the brightness step. If the
@@ -90,12 +95,15 @@ def analyze_back(photo: str | Path, game: GameSpec, out_dir: Optional[str] = Non
         method = coarse[side].method or "texture"
         u_ok, v_ok, diag = _fine(method)
         line, rep = _edge_report(side, method, u_ok, v_ok, diag)
-        if line is None:
+        if _thin_fit(line, diag):
+            # the primary scanner either failed or fitted a thin/noisy
+            # line; ask the other detector and keep the better-supported
+            # of the two rather than whichever ran first
             alt = "step" if method == "texture" else "texture"
             u2, v2, d2 = _fine(alt)
             line2, rep2 = _edge_report(side, alt, u2, v2, d2)
-            if line2 is not None:
-                line, rep, diag, method = line2, rep2, d2, alt
+            line, rep, diag, method = _prefer_fit(
+                (line, rep, diag, method), (line2, rep2, d2, alt))
         methods[side] = method
         if line is not None and line.bow_px and line.bow_px > 3.0:
             qa.append(QAFlag("CURL_SUSPECTED",
@@ -105,16 +113,7 @@ def analyze_back(photo: str | Path, game: GameSpec, out_dir: Optional[str] = Non
         res.edge_fits.append(rep)
 
     # --- frame-edge proximity (radial distortion is unmodelled) ---
-    margin = 0.05 * min(Wimg, Himg)
-    for side, line in lines.items():
-        if line is None:
-            continue
-        pts = line.points(20)
-        if (pts[:, 0].min() < margin or pts[:, 0].max() > Wimg - margin or
-                pts[:, 1].min() < margin or pts[:, 1].max() > Himg - margin):
-            qa.append(QAFlag("RADIAL_DISTORTION_RISK",
-                             f"{side} card edge lies within 5% of the photo frame "
-                             "edge; radial lens distortion is not modelled there"))
+    _frame_proximity_qa(qa, lines, Wimg, Himg)
 
     have_lr = lines["left"] is not None and lines["right"] is not None
     have_tb = lines["top"] is not None and lines["bottom"] is not None

@@ -92,3 +92,77 @@ def _edge_report(name, method, us, vs, diag, flag_rms=1.5, min_pts=10):
     if diag.n_ok < 0.7 * diag.n_attempted:
         rep.notes.append(f"partial coverage: {diag.summary()}")
     return line, rep
+
+
+def _thin_fit(line, diag, flag_rms=1.5, min_frac=0.6):
+    """True when a scanner's fit is acceptable but poorly supported.
+
+    A line drawn through a fifth of the scan lines has, by construction,
+    seen a fifth of the edge, and the lines it kept are the ones where
+    that scanner's assumptions happened to hold - which is exactly where
+    a local artifact (a glare band, a stretch of artwork the same tone as
+    the surround) can drag it. Such a fit is worth a second opinion from
+    the other detector.
+    """
+    if line is None:
+        return True
+    if line.rms > flag_rms:
+        return True
+    return diag.n_attempted > 0 and diag.n_ok < min_frac * diag.n_attempted
+
+
+def _prefer_fit(a, b, support_tol=0.75):
+    """Choose between two scanner results for the same edge.
+
+    Each argument is (line, report, diag, method); either line may be
+    None. A fit backed by materially more scan lines wins outright;
+    when support is comparable, the tighter residual wins. Ties keep the
+    first argument, so the caller's primary scanner is never displaced
+    without a reason.
+    """
+    if b[0] is None:
+        return a
+    if a[0] is None:
+        return b
+    na, nb = a[0].n, b[0].n
+    if nb > na and na < support_tol * nb:
+        return b
+    if na > nb and nb < support_tol * na:
+        return a
+    return b if b[0].rms < a[0].rms else a
+
+
+def _frame_proximity_qa(qa, lines, w_img, h_img, extra=""):
+    """Flag card edges sitting within 5% of the photo frame, where radial
+    lens distortion (unmodelled) can bias the fit.
+
+    When ALL FOUR edges trip it the image is not a badly framed photo but
+    a tight crop or a scan - a framing a photographer cannot produce by
+    accident. That gets one informational flag instead of four warnings:
+    the distortion caveat still applies if the crop came from a phone
+    photo, but nothing about the capture is wrong, and four warnings on a
+    clean scan train the reader to ignore the code.
+    """
+    margin = 0.05 * min(w_img, h_img)
+    near = []
+    for side, line in lines.items():
+        if line is None:
+            continue
+        pts = line.points(20)
+        if (pts[:, 0].min() < margin or pts[:, 0].max() > w_img - margin or
+                pts[:, 1].min() < margin or pts[:, 1].max() > h_img - margin):
+            near.append(side)
+    if len(near) == 4:
+        qa.append(QAFlag(
+            "TIGHT_CROP",
+            "all four card edges lie within 5% of the image frame: this is "
+            "a crop or a scan rather than a framed photo. Edge detection "
+            "handles it; but if the image was cropped from a phone photo, "
+            "radial lens distortion near the original frame is not "
+            "modelled" + extra, severity="info"))
+        return
+    for side in near:
+        qa.append(QAFlag("RADIAL_DISTORTION_RISK",
+                         f"{side} card edge lies within 5% of the photo frame "
+                         "edge; radial lens distortion is not modelled "
+                         "there" + extra))

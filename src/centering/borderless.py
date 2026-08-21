@@ -21,7 +21,8 @@ import numpy as np
 
 from . import edges as E
 from . import geometry as G
-from .fitting import _edge_report, _shadow_band_qa
+from .fitting import (_edge_report, _frame_proximity_qa, _prefer_fit,
+                      _shadow_band_qa, _thin_fit)
 from .estimate import CAP_MM, rescue_edge
 from .games.base import GameSpec
 from .imgio import load_photo
@@ -122,6 +123,12 @@ def analyze_borderless(photo: str | Path, card_id: str, game: GameSpec,
                     ) from err
             x0, y0 = int(coarse["left"].pos), int(coarse["top"].pos)
             x1, y1 = int(coarse["right"].pos), int(coarse["bottom"].pos)
+            slops = [coarse[s].slop_mm for s in _SIDES]
+            if all(v is not None for v in slops):
+                # a seed that knows its own accuracy (tight-crop path):
+                # a narrow window keeps the level estimates off distant
+                # artwork, which on a full-bleed face is what breaks them
+                seed_slop_mm = min(slops)
     ppm0 = (x1 - x0) / game.card_w_mm
 
     corners_bg = background_uniformity(gray)
@@ -145,18 +152,20 @@ def analyze_borderless(photo: str | Path, card_id: str, game: GameSpec,
             search_in_px=seed_slop_mm * ppm0)
         line, rep = _edge_report(side, "step", u_ok, v_ok, diag)
         methods[side] = "step"
-        if line is None:
-            # black border on a dark textured mat has no brightness step,
-            # but the texture transition still marks the cut (the same
-            # signal the back pipeline uses on dark mats)
+        u2, v2, d2 = np.array([]), np.array([]), None
+        if _thin_fit(line, diag):
+            # a black border on a dark textured mat has no brightness step
+            # at all, and a full-bleed face whose artwork happens to match
+            # the surround leaves the step scanner clinging to a handful of
+            # lines. The texture transition marks the same cut; keep
+            # whichever fit the edge actually supports.
             u2, v2, d2 = E.texture_scan(
                 gray, side, approx[side], us,
                 search_out_px=seed_slop_mm * ppm0,
                 search_in_px=seed_slop_mm * ppm0)
             line2, rep2 = _edge_report(side, "texture", u2, v2, d2)
-            if line2 is not None:
-                line, rep, diag = line2, rep2, d2
-                methods[side] = "texture"
+            line, rep, diag, methods[side] = _prefer_fit(
+                (line, rep, diag, "step"), (line2, rep2, d2, "texture"))
         if line is None:
             # estimate tier: the strict tier refused this edge; attempt an
             # explicitly-labelled rescue (cluster split + hybrid cut
@@ -199,18 +208,8 @@ def analyze_borderless(photo: str | Path, card_id: str, game: GameSpec,
         lines[side], reports[side] = line, rep
         res.edge_fits.append(rep)
 
-    margin = 0.05 * min(Wimg, Himg)
-    for side, line in lines.items():
-        if line is None:
-            continue
-        pts = line.points(20)
-        if (pts[:, 0].min() < margin or pts[:, 0].max() > Wimg - margin or
-                pts[:, 1].min() < margin or pts[:, 1].max() > Himg - margin):
-            qa.append(QAFlag("RADIAL_DISTORTION_RISK",
-                             f"{side} card edge lies within 5% of the photo "
-                             "frame edge; radial lens distortion is not "
-                             "modelled and can bias the result "
-                             "(seen at the 0.1mm level in validation)"))
+    _frame_proximity_qa(qa, lines, Wimg, Himg,
+                        extra=" (seen at the 0.1mm level in validation)")
 
     missing = [s for s in _SIDES if lines[s] is None]
     if missing:

@@ -17,6 +17,12 @@ this folder:
 | IMG_6397.HEIC / IMG_6398.HEIC | Gadget Hackwrench 12:147 front/back, WHITE paper | test_gadget_multibg.py |
 | IMG_6399.HEIC / IMG_6400.HEIC | Gadget Hackwrench 12:147 front/back, dark mat (directional light - refusal cases) | test_gadget_multibg.py |
 | IMG_6401.HEIC / IMG_6402.HEIC | Gadget Hackwrench 12:147 front/back, kraft cardboard | test_gadget_multibg.py |
+| tag/T6453597{F,B}-*.jpg, tag/Y3106454{F,B}-*.jpg | Lilo & Stitch 13-244 Enchanted, two TAG-graded copies, front/back - grading-report scans, tight-cropped | test_tag_scans.py |
+
+The `tag/` subfolder holds grading-report scans, whose filenames encode the
+grader's own centering percentages (`<serial><F|B>-<L>L<R>R<T>T<B>B`). They
+are a third-party reference for development only - the analyzer never reads
+them. `calibration/tag_reference.py <folder>` prints ours against theirs.
 
 Official card renders are never stored in the repo either: the analyzer
 downloads the render it needs at runtime into `~/.cache/centering`

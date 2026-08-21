@@ -5,14 +5,36 @@ import cv2
 import numpy as np
 
 
+# SIFT on a very large photo costs memory quadratically in the long edge
+# (a 27MP scan needs several GB and can be killed outright), and buys
+# nothing: the match is limited by the render's own resolution (~1500px
+# across a 63mm card), not the photo's. Photos above this are matched
+# downscaled and the homography is rescaled back to full-resolution photo
+# coordinates - the edge scans that carry the measurement still run at
+# full resolution. The cap sits above a 12MP phone photo, so ordinary
+# captures are matched exactly as before.
+MATCH_MAX_LONG_EDGE = 4096
+
+
 def match_to_render(photo_gray: np.ndarray, render_gray: np.ndarray,
                     photo_mask: np.ndarray | None = None,
                     n_features: int = 8000, ratio: float = 0.72,
-                    ransac_px: float = 3.0):
+                    ransac_px: float = 3.0,
+                    max_long_edge: int = MATCH_MAX_LONG_EDGE):
     """Returns (H_photo_to_render, n_inliers, median_reproj_px).
 
     Deterministic: OpenCV RNG is seeded before RANSAC.
     """
+    k = 1.0
+    long_edge = max(photo_gray.shape[:2])
+    if max_long_edge and long_edge > max_long_edge:
+        k = max_long_edge / float(long_edge)
+        photo_gray = cv2.resize(photo_gray, None, fx=k, fy=k,
+                                interpolation=cv2.INTER_AREA)
+        if photo_mask is not None:
+            photo_mask = cv2.resize(photo_mask, (photo_gray.shape[1],
+                                                 photo_gray.shape[0]),
+                                    interpolation=cv2.INTER_NEAREST)
     p8 = cv2.convertScaleAbs(photo_gray)
     r8 = cv2.convertScaleAbs(render_gray)
     sift = cv2.SIFT_create(nfeatures=n_features)
@@ -36,4 +58,8 @@ def match_to_render(photo_gray: np.ndarray, render_gray: np.ndarray,
     inl = inl.ravel().astype(bool)
     proj = cv2.perspectiveTransform(src[inl], H).reshape(-1, 2)
     err = np.linalg.norm(proj - dst[inl].reshape(-1, 2), axis=1)
+    if k != 1.0:
+        # H maps downscaled-photo -> render; compose with the downscale so
+        # the caller keeps a full-resolution-photo -> render homography
+        H = H @ np.diag([k, k, 1.0])
     return H, int(inl.sum()), float(np.median(err))

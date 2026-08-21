@@ -19,6 +19,11 @@ card_db/images/
 # copyrighted artwork and are NEVER distributed with this repo.
 # Renders are fetched on demand (runtime cache / card_db/fetch_images.py);
 # test-fixture photos are local-only and the tests skip without them.
+fixtures/**/*.HEIC
+fixtures/**/*.heic
+fixtures/**/*.jpg
+fixtures/**/*.jpeg
+fixtures/**/*.png
 fixtures/*.HEIC
 fixtures/*.heic
 fixtures/*.jpg

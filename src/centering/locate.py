@@ -5,7 +5,9 @@ coarse pass reuses the texture scanner itself: full-span scans from each side
 of the frame on a sparse row/column grid. On smooth light backgrounds (white
 paper, gray desk) both the mat and the card border are texture-free, so each
 side falls back to the polarity-agnostic brightness step scanner. Sides that
-fail both are either inferred from the opposite side (when scale is known) or
+fail both fall back to the tight-crop path (background level taken from the
+image border, for scans and pre-cropped exports where the card nearly fills
+the frame), are inferred from the opposite side (when scale is known), or are
 reported failed with the scanners' reject reasons - which become the
 user-facing refusal text.
 """
@@ -27,6 +29,12 @@ class CoarseSide:
     mad_px: float = 0.0
     reason: str = ""
     method: str = ""       # texture | step (scanner that produced pos)
+    slop_mm: Optional[float] = None
+    """How far the fine scan should search either side of `pos`, when this
+    seed knows better than the pipeline default. The tight-crop path reads
+    the same border feature the fine scanners will, so its seed is good to
+    a fraction of a millimetre and a narrow window keeps the scanners'
+    background/card level estimates from reaching into distant artwork."""
 
 
 def _largest_cluster(v: np.ndarray, width: float):
@@ -83,6 +91,126 @@ def _consensus(method: str, vs, diag, n_lines: int, mad_limit: float,
     return CoarseSide("ok", cmed, len(cluster), cmad, method=method), cmad
 
 
+# --------------------------------------------------------------------------
+# tight-crop localization (card nearly fills the frame)
+# --------------------------------------------------------------------------
+# The per-side coarse scanners sample their "background" level from a wide
+# window outside the nominal edge (30% of the frame). When the card fills
+# the frame - flatbed scans, grading-report exports, or a photo the user
+# already cropped tight - that window is mostly card, so the contrast test
+# fails on every side and the whole photo is refused even though the edge
+# itself is perfectly crisp. This path takes the background level from the
+# outermost few pixels of the image instead and walks inward to the first
+# sustained departure from it. It only produces a *coarse* seed: the
+# sub-pixel fits, tilt correction and refusal gates downstream are
+# unchanged.
+
+TIGHT_MARGIN_FRAC = 0.12     # search depth as a fraction of the dimension
+TIGHT_ASPECT_TOL = 0.03      # box aspect must match the card to 3%
+TIGHT_SLOP_MM = 0.6          # fine-scan window around a tight-crop seed
+
+
+def _edge_band(gray: np.ndarray, side: str, depth: int, lo: float, hi: float):
+    """[line, sample] block along one image border, sample ordered inward."""
+    H, W = gray.shape
+    a, b = int(lo), int(hi)
+    if side == "left":
+        return gray[a:b, :depth]
+    if side == "right":
+        return gray[a:b, W - depth:][:, ::-1]
+    if side == "top":
+        return gray[:depth, a:b].T
+    return gray[H - depth:, a:b][::-1].T
+
+
+def _margin_depth(block: np.ndarray, strip: int, sustain: int):
+    """First sample at which a uniform border band gives way to the card.
+
+    Two signals, either of which ends the margin:
+
+    * **level** - the card sits at a different brightness than the border.
+      This is what carries a dark card back against a light surround.
+    * **along-edge variation** - a margin is *uniform along its edge*
+      (a mat photographed out of focus, a scanner platen, the flat colour
+      a grading service pads its crops with), while card artwork varies
+      from one scan line to the next. This carries the cases where the
+      artwork happens to sit at the border's brightness, where a level
+      test alone walks deep into the card.
+
+    Returns the sample index, or None.
+    """
+    lev = np.median(block, axis=0)
+    var = np.median(np.abs(block - lev[None, :]), axis=0)
+    bg = float(np.median(lev[:strip]))
+    bg_lev_mad = float(np.median(np.abs(lev[:strip] - bg)))
+    bg_var = float(np.median(var[:strip]))
+    thr_lev = max(10.0, 6.0 * bg_lev_mad)
+    thr_var = max(4.0, 3.0 * bg_var + 3.0)
+    depart = (np.abs(lev - bg) > thr_lev) | (var > thr_var)
+    run = 0
+    for k, d in enumerate(depart):
+        run = run + 1 if d else 0
+        if run >= sustain:
+            idx = k - sustain + 1
+            return idx if idx > 0 else None
+    return None
+
+
+def tight_crop_locate(gray: np.ndarray, card_w_mm: float, card_h_mm: float,
+                      thirds_tol_frac: float = 0.006):
+    """Coarse localization for a card that nearly fills the frame.
+
+    Returns (sides, ppm) on success, or None when the geometry does not
+    check out. Two gates keep this from inventing a card in an ordinary
+    photo: each edge is located independently in three sections along its
+    length and they must agree, and the resulting box must have the
+    card's aspect ratio to TIGHT_ASPECT_TOL. A box that is not a card
+    practically never clears both.
+    """
+    H, W = gray.shape
+    strip = max(3, int(round(0.002 * min(H, W))))
+    sustain = max(3, int(round(0.0015 * min(H, W))))
+    out = {}
+    for side in ("left", "right", "top", "bottom"):
+        dim = W if side in ("left", "right") else H
+        along = H if side in ("left", "right") else W
+        depth = int(round(TIGHT_MARGIN_FRAC * dim))
+        if depth < strip + sustain + 4:
+            return None
+        lo, hi = 0.15 * along, 0.85 * along
+        idx = _margin_depth(_edge_band(gray, side, depth, lo, hi),
+                            strip, sustain)
+        if idx is None:
+            return None
+        # sections along the edge must agree: a real card edge is straight
+        # and parallel to the crop, a chance uniform patch is not
+        thirds = []
+        for k in range(3):
+            t0 = lo + k * (hi - lo) / 3.0
+            t1 = lo + (k + 1) * (hi - lo) / 3.0
+            ti = _margin_depth(_edge_band(gray, side, depth, t0, t1),
+                               strip, sustain)
+            if ti is None:
+                return None
+            thirds.append(ti)
+        if max(thirds) - min(thirds) > max(4.0, thirds_tol_frac * dim):
+            return None
+        pos = float(idx) if side in ("left", "top") else float(dim - idx)
+        out[side] = CoarseSide(
+            "ok", pos, len(thirds), float(max(thirds) - min(thirds)),
+            reason="located from the image border (card nearly fills the frame)",
+            method="step", slop_mm=TIGHT_SLOP_MM)
+
+    w_px = out["right"].pos - out["left"].pos
+    h_px = out["bottom"].pos - out["top"].pos
+    if w_px <= 0 or h_px <= 0:
+        return None
+    nominal = card_w_mm / card_h_mm
+    if abs((w_px / h_px) / nominal - 1.0) > TIGHT_ASPECT_TOL:
+        return None
+    return out, w_px / card_w_mm
+
+
 def coarse_locate(gray: np.ndarray, card_w_mm: float, card_h_mm: float,
                   n_lines: int = 15, mad_limit: float = 30.0):
     """Returns (sides: dict[str, CoarseSide], ppm: float|None)."""
@@ -107,7 +235,8 @@ def coarse_locate(gray: np.ndarray, card_w_mm: float, card_h_mm: float,
     sides: dict[str, CoarseSide] = {}
     for side, (approx, so, si, us) in cfg.items():
         _, vs_t, diag_t = texture_scan(gray, side, approx, us, so, si,
-                                       sustain=30, min_sep=4.0)
+                                       sustain=30, min_sep=4.0,
+                                       allow_inverted=False)
         cs, mad_t = _consensus("texture", vs_t, diag_t, n_lines, mad_limit)
         mad_s = None
         if cs is None:
@@ -135,6 +264,18 @@ def coarse_locate(gray: np.ndarray, card_w_mm: float, card_h_mm: float,
                 f"coarse lines usable, {diag_t.summary()}; step: "
                 f"{diag_s.n_ok}/{diag_s.n_attempted} usable, "
                 f"{diag_s.summary()})")
+
+    # Tight crop / scan fallback: a side with (almost) no background
+    # outside the card gives the standard scanners nothing to measure
+    # contrast against. Retry from the image-border level; the aspect
+    # gate inside keeps this from inventing a box on ordinary photos.
+    if any(s.status == "failed" for s in sides.values()):
+        tight = tight_crop_locate(gray, card_w_mm, card_h_mm)
+        if tight is not None:
+            tsides, _ = tight
+            for side, cs in sides.items():
+                if cs.status == "failed":
+                    sides[side] = tsides[side]
 
     ppm = None
     if sides["left"].status == "ok" and sides["right"].status == "ok":

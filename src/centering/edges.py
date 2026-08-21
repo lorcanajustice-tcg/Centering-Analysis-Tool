@@ -83,14 +83,47 @@ def _smooth(x: np.ndarray, w: int) -> np.ndarray:
     return np.convolve(x, k, mode="same")
 
 
+def _outside_count(coords: np.ndarray, side: str, approx: float) -> int:
+    """Samples of a scan profile that lie OUTSIDE the nominal card edge.
+
+    `_profile_band` clips its window to the image, so the outside span can
+    be far shorter than `search_out_px` asked for - on a scan or a tightly
+    cropped photo it may be a few dozen pixels. The background/card level
+    estimators below size their sampling windows from this so they never
+    reach across the edge (which would flatten the contrast and refuse a
+    perfectly crisp edge).
+    """
+    outside = coords < approx if side in ("left", "top") else coords > approx
+    return int(np.count_nonzero(outside))
+
+
+def _level_windows(n: int, n_out: int, frac_div: int, floor: int = 8):
+    """(w_out, w_in) sample counts for the outer/inner level estimates.
+
+    Historical behaviour was a fixed n//frac_div at each end; that is kept
+    whenever the spans are long enough to support it, so results on
+    normally-framed photos are bit-identical.
+    """
+    w = max(floor, n // frac_div)
+    w_out = max(floor, min(w, int(0.8 * n_out)))
+    w_in = max(floor, min(w, int(0.8 * (n - n_out))))
+    return w_out, w_in
+
+
 def texture_scan(gray: np.ndarray, side: str, approx: float,
                  scan_us: np.ndarray, search_out_px: float, search_in_px: float,
                  band: int = 24, sustain: int = 18, min_sep: float = 6.0,
-                 smooth_w: int = 5):
+                 smooth_w: int = 5, allow_inverted: bool = True):
     """Texture-transition edge detection (dark on dark).
 
     Returns (us, vs, diag): per accepted scan line the coordinate along the
     edge (us) and sub-pixel edge position (vs).
+
+    `allow_inverted` enables the smooth-surround / textured-face polarity
+    (see below). It belongs to the FINE pass, which searches a window
+    around a known edge: in a wide-open coarse search the inverted
+    polarity will happily report the first texture change inside the
+    artwork, so the coarse pass keeps the historical polarity only.
     """
     us, vs = [], []
     diag = ScanDiagnostics()
@@ -107,8 +140,31 @@ def texture_scan(gray: np.ndarray, side: str, approx: float,
             continue
         prof = _smooth(block.std(axis=0), smooth_w)
         n = len(prof)
-        outer = float(np.median(prof[: max(10, n // 5)]))
-        inner = float(np.percentile(prof[-max(10, n // 5):], 8))
+        w_out, w_in = _level_windows(n, _outside_count(coords, side, approx),
+                                     5, floor=10)
+        # polarity-agnostic, mirroring step_scan: the historical case is a
+        # textured mat against a smooth card border, but a smooth surround
+        # (scanner platen, out-of-focus paper, the flat colour a crop is
+        # padded with) against a grainy printed face is the same signal
+        # inverted. The smooth side is summarised by its 8th percentile
+        # (robust to specks), the textured side by its median; the profile
+        # is then normalised so the smooth side is always HIGH and the
+        # historical "sustained drop" logic applies unchanged. For the
+        # historical polarity pol=+1 and the arithmetic is unchanged.
+        # the flip is only taken when the inverted contrast is unambiguous
+        # (inside rougher than outside by at least the separation the
+        # detector would demand anyway); marginal lines keep the
+        # historical polarity, so dark-mat behaviour is untouched
+        m_out = float(np.median(prof[:w_out]))
+        m_in = float(np.median(prof[-w_in:]))
+        pol = -1.0 if (allow_inverted and m_in - m_out > min_sep) else 1.0
+        if pol > 0:
+            outer = float(np.median(prof[:w_out]))
+            inner = float(np.percentile(prof[-w_in:], 8))
+        else:
+            outer = -float(np.percentile(prof[:w_out], 8))
+            inner = -float(np.median(prof[-w_in:]))
+            prof = -prof
         if outer - inner < min_sep:
             diag.note_reject("insufficient_texture_contrast")
             continue
@@ -172,8 +228,9 @@ def step_scan(gray: np.ndarray, side: str, approx: float, scan_us: np.ndarray,
             continue
         prof = block.mean(axis=0)
         n = len(prof)
-        outer = float(np.median(prof[: max(8, n // 4)]))
-        inner = float(np.median(prof[-max(8, n // 4):]))
+        w_out, w_in = _level_windows(n, _outside_count(coords, side, approx), 4)
+        outer = float(np.median(prof[:w_out]))
+        inner = float(np.median(prof[-w_in:]))
         if abs(inner - outer) < min_contrast:
             diag.note_reject("insufficient_contrast")
             continue
