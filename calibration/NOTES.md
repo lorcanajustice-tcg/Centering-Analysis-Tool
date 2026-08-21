@@ -17,7 +17,8 @@ Ravensburger renders (1468x2048) are cropped ~1.15mm total in width
 
 ## Evidence
 
-1. Anchor survey over all 3,211 renders (card_db/anchors_report.json):
+1. Anchor survey over all renders (card_db/anchors_report.json; 3,211
+   at the time of writing, 3,226 after set 13):
    the crop is layout-locked - footer emblem y=1899-1900 (+-1px) on
    bordered AND full-art cards; standard-frame border 60px L/R (symmetric),
    frame top 66px, footer band top 1907px. Exceptions with their own
@@ -60,10 +61,14 @@ Ravensburger renders (1468x2048) are cropped ~1.15mm total in width
    (>=5% clearance to photo edges). All four sides then become clean
    bright/dark steps and the shadow artifact vanishes.
 3. To tighten the y-bias below +-0.1: 3-4 more standard front+back pairs
-   photographed per (2), plus at least one clean Enchanted pair to close
-   the question whether full-art renders share exactly the same constant
-   (all pixel-anchor evidence says they do).
-4. card_db/ holds all 3,211 renders + index.json; fetch_images.py
+   photographed per (2). The full-art half of this item is CLOSED as of
+   2026-08-21 - full-art renders do share the bordered constant, and no
+   Enchanted pair needs shooting for it. card_db/emblem_colour.py measured
+   two template-free anchors over all 3,226 renders (the emblem's mirror-
+   symmetry axis in x, the collector line in y) and bounds any full-art
+   render-crop offset at 0.0139mm in x and 0.0101mm in y.
+4. card_db/ holds every render + index.json (3,226 as of set 13);
+   fetch_images.py
    refreshes it after new set releases (re-run the anchor survey then).
 
 ---

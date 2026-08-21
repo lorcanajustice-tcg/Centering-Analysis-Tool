@@ -52,15 +52,26 @@ Library API (all functions pure; results JSON-serializable via `.to_dict()`):
   registration scatter of about +-0.19mm (one calibrated card reached
   0.43mm), so a small registration delta is normal manufacturing
   variation, not a miscut.
-- **Honest uncertainty**: every number carries an uncertainty estimate.
-  Quantities that can't be measured reliably are *refused* with the reason,
-  never guessed.
+- **Honest uncertainty**: every number carries an uncertainty estimate, and
+  every number is labelled with how well it is known. Three tiers, never
+  blurred: **measured**; **estimated** (shown as ≈ and labelled, for
+  an edge the strict tier refused but that a labelled rescue could recover
+  - it always carries an inflated uncertainty, and the axis is refused
+  outright if the total exceeds about a grading band's width); and
+  **refused**, with the reason. Nothing is ever silently guessed, and an
+  estimate never presents itself as a measurement.
 - **Verification overlays**: every analysis writes a JPEG with the detected
   edges, frame lines, and projected render bounds drawn on your photo, so
   you can check the measurement yourself.
 - **Tilt tolerance**: perspective from a slightly tilted shot is measured
   and corrected. Lens distortion is not modelled, so keep the card away
   from the photo's frame edges (you'll be warned if it's too close).
+- **Coloured backgrounds**: where the surround has a hue the card's own
+  border does not, the cut is measured on the colour step rather than the
+  brightness step. That matters because a card casts a shadow onto its
+  background, and the shadow is a brightness ramp that reaches outside the
+  real cut - a chromaticity edge ignores it. This is what makes grading-
+  service scans, which sit on a coloured backing, measurable.
 
 ## Getting a good photo
 
@@ -80,6 +91,14 @@ Also: telephoto lens; card centred, filling 60-80% of the frame, with at
 least 5% clearance between every card edge and the photo frame edge (lens
 distortion is not modelled near the frame); unsleeved; small tilt (<3°) is
 fine; flatten foil curl.
+
+**If auto-localization fails**, the web app offers "Mark the card position
+manually": you drag a rough box along the card's own edges and the analyzer
+does the precise part from there. The seed only tells it where to look -
+the edge fitting, and so the measurement, is unchanged, and results agree
+with automatic localization to within about 7 micrometres. It is the
+fallback for photos that cannot be reshot (a third-party listing photo, a
+card already in a slab), not a routine step.
 
 If a shot has problems, the report says so via QA flags (e.g.
 `BACKGROUND_NONUNIFORM`, `SHADOW_BAND_SUSPECTED`, `ASPECT_DEVIATION`,

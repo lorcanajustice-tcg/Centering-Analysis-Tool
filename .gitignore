@@ -41,3 +41,7 @@ DEV-NOTES.md
 # OS cruft
 Thumbs.db
 .DS_Store
+
+# Scratch for files a mounted session cannot delete (it can move, not unlink):
+# stale .git/*.lock, downloaded wheels. Safe to delete by hand at any time.
+_to_delete/

@@ -205,18 +205,31 @@ def analyze_back(photo: str | Path, game: GameSpec, out_dir: Optional[str] = Non
         if fline is not None and fdiag.n_attempted and \
                 fline.n < 0.5 * fdiag.n_attempted:
             # The printed line is a halftone dot chain crossed by decorative
-            # structure; where fewer than half the scan lines survive, the
-            # survivors are not independent samples of one feature and the
-            # statistical term below understates the scatter. Seen on the
-            # 2026-08-21 TAG scans: at n_scans=55 the L/R ratio sits 1.5
-            # points off its own n_scans=200 value.
+            # structure. Where fewer than half the scan lines survive, the
+            # survivors are a POSITIONALLY BIASED subset - the peak finder
+            # keeps the lines where the dot chain happens to present a clean
+            # peak, and those sample particular phases of the halftone - so
+            # the fitted line sits slightly off where a dense sample puts it.
+            #
+            # Measured 2026-08-21 on the TAG scans, and this is a BIAS, not a
+            # variance problem: on copy Y at n_scans=55 the L/R ratio reads
+            # 52.89 against 50.98 at n_scans=151, a 1.9-point move, while the
+            # two halves of that same sparse sample agree with each other to
+            # 5um (0.1 points). A precise, reproducible, wrong answer. No
+            # variance correction can express that - not an effective-n on
+            # the statistical term (which is 0.05pt of a 0.41pt total here),
+            # not a jackknife, not a split-half. The only fixes are to sample
+            # densely enough to converge, or to measure the drift by fitting
+            # at two densities. See TODO.md/DEV-NOTES.md; deliberately not
+            # papered over with an uncertainty term that would be fiction.
             qa.append(QAFlag(
                 "FRAME_LINE_SPARSE",
                 f"{side} frame line fitted from {fline.n} of "
                 f"{fdiag.n_attempted} scan lines ({fdiag.summary()}); the "
-                "quoted statistical uncertainty assumes independent per-line "
-                "noise and will read optimistically - re-run with a higher "
-                "n_scans on a high-resolution capture",
+                "surviving lines are a biased subset of the printed line, so "
+                "this border may sit off by more than its quoted uncertainty "
+                "- re-run with a higher n_scans on a high-resolution capture "
+                "and compare",
                 severity="warning"))
 
     # --- borders ---
