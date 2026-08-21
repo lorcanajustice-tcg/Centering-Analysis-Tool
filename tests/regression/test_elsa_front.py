@@ -35,7 +35,14 @@ def test_horizontal_shift_matches_prototype(result):
     assert m.status == "measured"
     # negative = toward left edge; prototype: -0.27, cross-validated
     assert m.value == pytest.approx(-0.27, abs=0.06)
-    assert m.uncertainty.total <= 0.06
+    # Composed uncertainty. Widened 0.06 -> 0.07 on 2026-08-21 with the
+    # face-aware cut term (GameSpec.cut_def_mm): a FRONT is cut through
+    # printed artwork and its cut edge is worth ~0.05mm/side more doubt
+    # than the back's, which the DIG dimensions measured and the single
+    # global edge_def_px used to hide. The measurement did not get worse
+    # (the value moved -0.246 -> -0.244, pure rescaling); a systematic
+    # that was always there is now carried instead of ignored.
+    assert m.uncertainty.total <= 0.07
 
 
 def test_vertical_shift_measured(result):

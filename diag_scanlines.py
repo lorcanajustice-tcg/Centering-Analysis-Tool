@@ -99,6 +99,9 @@ def main():
     ap.add_argument("photo")
     ap.add_argument("--n", type=int, default=50)
     ap.add_argument("--out", default=None)
+    ap.add_argument("--bbox", default=None,
+                    help="x0,y0,x1,y1 manual card box (image px); "
+                    "overrides auto localization for the fine scans")
     args = ap.parse_args()
 
     rgb, gray, inp = load_photo(args.photo)
@@ -166,8 +169,17 @@ def main():
                                  "" if v is None else f"{v:.2f}"))
 
     approx_pos = {}
+    if args.bbox:
+        bx = [float(v) for v in args.bbox.split(",")]
+        assert len(bx) == 4, "--bbox needs x0,y0,x1,y1"
+        approx_pos = {"left": bx[0], "right": bx[2],
+                      "top": bx[1], "bottom": bx[3]}
+        ppm0 = (bx[2] - bx[0]) / game.card_w_mm
+        say(f"manual bbox {bx} -> ppm {ppm0:.2f}")
     for s in SIDES:
-        if coarse[s].pos is not None:
+        if s in approx_pos:
+            pass
+        elif coarse[s].pos is not None:
             approx_pos[s] = float(coarse[s].pos)
         elif bbox is not None:
             approx_pos[s] = float({"left": bbox[0], "right": bbox[2],

@@ -99,9 +99,18 @@ def test_back_cut_edges_all_fit(backs, name):
 @pytest.mark.parametrize("name", BACKS + FRONTS)
 def test_scale_and_shape_are_physical(backs, fronts, name):
     """A localization that latched onto the wrong thing would not land on
-    the scans' true 67.5 px/mm AND the card's aspect ratio at once."""
+    the scans' true scale AND the card's aspect ratio at once.
+
+    68.0 px/mm is externally known, not fitted: TAG's DIG reports publish
+    their own measured dimensions for these two certs (2.475x3.460" and
+    2.476x3.462"), and dividing our measured pixel spans by them gives
+    67.993-68.008 px/mm from four independent dimensions - a 1727 dpi
+    scan. The bound read 67.5 until 2026-08-21 only because px_per_mm is
+    computed against GameSpec.card_w_mm, which was then the 63.5mm
+    nominal rather than the manufactured 62.9mm.
+    """
     res = (backs if name in BACKS else fronts)[name]
-    assert res.input.px_per_mm == pytest.approx(67.5, abs=0.4)
+    assert res.input.px_per_mm == pytest.approx(68.0, abs=0.4)
     assert res.aspect_ratio_measured == pytest.approx(
         LORCANA.card_h_mm / LORCANA.card_w_mm, rel=0.005)
 

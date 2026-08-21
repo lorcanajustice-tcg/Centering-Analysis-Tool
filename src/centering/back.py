@@ -223,8 +223,13 @@ def analyze_back(photo: str | Path, game: GameSpec, out_dir: Optional[str] = Non
     ed = game.edge_def_px
 
     def border(side) -> Measurement:
-        def_border_px = math.sqrt(
-            ed[methods.get(side, "texture")] ** 2 + ed["frame_peak"] ** 2)
+        # Cut edge: face-aware (see GameSpec.cut_def_mm - the back's cut is
+        # through a plain border and carries no full-art rim term).
+        # Frame line: a printed feature, detector-domain only.
+        axis = "x" if side in ("left", "right") else "y"
+        def_border_mm = math.hypot(
+            game.edge_def_mm("back", methods.get(side, "texture"), axis, ppm),
+            ed["frame_peak"] / ppm)
         if lines[side] is None:
             return Measurement.refused(
                 "mm", f"{side} card edge unmeasurable: "
@@ -261,7 +266,7 @@ def analyze_back(photo: str | Path, game: GameSpec, out_dir: Optional[str] = Non
                                        flines[side].rms, flines[side].n)
         unc = Uncertainty(statistical=stat_px / ppm,
                           perspective=w * wvar / 2.0,
-                          edge_definition=def_border_px / ppm)
+                          edge_definition=def_border_mm)
         return Measurement(w, "mm", unc)
 
     res.borders_mm = {s: border(s) for s in _SIDES}

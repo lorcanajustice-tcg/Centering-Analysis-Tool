@@ -19,7 +19,11 @@ except ImportError:  # running from a checkout without `pip install -e .`
     from centering.render_match import match_to_render
     from centering import geometry as G
 
-CARD_W, CARD_H = 63.5, 88.9
+# Manufactured card size (corrected 2026-08-21 from the 63.5 x 88.9
+# nominal; see games/lorcana.py for the provenance). This prototype
+# script is not the library path - the 2026-07-06 recalibration was
+# run through the pipelines - but it must not disagree with the spec.
+CARD_W, CARD_H = 62.9, 87.9
 
 def profile(gray, p, n_dir, offs, band, e_dir):
     """band-averaged profile at point p along n_dir over offsets offs."""

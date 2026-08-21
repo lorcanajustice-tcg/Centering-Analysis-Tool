@@ -5,8 +5,21 @@ from .base import FrameLineSpec, GameSpec
 
 LORCANA = GameSpec(
     name="lorcana",
-    card_w_mm=63.5,
-    card_h_mm=88.9,
+    # MANUFACTURED size, not the 2.5x3.5" nominal (corrected 2026-08-21).
+    # TAG's public DIG reports publish their own measured dimensions:
+    # T6453597 2.475x3.460", Y3106454 2.476x3.462", M5576586 2.480x3.456"
+    # = 62.865/62.890/62.992 x 87.884/87.935/87.782 mm (mean 62.92 x 87.87,
+    # per-card spread ~0.13mm, i.e. bigger than this constant's rounding).
+    # Independently corroborated: our chromaticity edges on two of those
+    # scans give 62.864/62.884 x 87.894/87.929mm at a scan scale of exactly
+    # 68.000 px/mm, agreeing with TAG to <=0.010mm on all four dimensions.
+    # The old 63.5 x 88.9 was the 2.5x3.5" nominal, 1.0%/1.1% too big, and
+    # made every absolute mm the tool printed 1% high. Ratios are
+    # scale-free, so no centering percentage moved.
+    # Aspect consequence: nominal H/W is 1.3975, not 1.4000 (the aspect
+    # gates in back.py/borderless.py read it from these two constants).
+    card_w_mm=62.9,
+    card_h_mm=87.9,
     back_frame=FrameLineSpec(min_peak=45.0, search_mm=(0.5, 6.0),
                              nominal_border_mm=2.4),
     # Equivalence-margin convention totals (cut-to-frame, both sides),
@@ -15,8 +28,15 @@ LORCANA = GameSpec(
     # remarkably manufacture-constant -- and T+B 4.305 +- 0.078 (sd) mm.
     # (The former T+B figure of 4.6 came from the 2026-07-03 dark-mat
     # shoot, whose horizontal edges were shadow-inflated outward.)
-    equiv_margin_lr_mm=4.78,
-    equiv_margin_tb_mm=4.31,
+    # RESCALED 2026-08-21 with the card-size correction above: those mm
+    # came out of the pipeline under card_w/h = 63.5/88.9, so they carried
+    # the same 1% error. x *= 62.9/63.5 -> 4.735, y *= 87.9/88.9 -> 4.262.
+    # This is a UNIT CONVERSION of the same 2026-07-06 measurement, not a
+    # re-measurement; the separate re-derivation with colour edges (they
+    # were measured with brightness edges, which sit ~0.07mm/side outside
+    # the cut) still needs a capture on a coloured surface. See TODO.md.
+    equiv_margin_lr_mm=4.735,
+    equiv_margin_tb_mm=4.262,
     # Render-crop bias, RE-CALIBRATED 2026-07-06 under the improved
     # protocol (white paper, diffuse light, polarity-agnostic detectors;
     # photos IMG_6397/98 + IMG_6403-6410, results in
@@ -42,6 +62,9 @@ LORCANA = GameSpec(
     # anchors). NOTE: this constant operationally includes any off-centre
     # of the printed back frame (inseparable in the pair estimator; see
     # calibration/NOTES.md "2026-07-06 reshoot").
+    # (Same 2026-08-21 rescaling applies in principle - y *= 87.9/88.9
+    # gives -0.0791 +- 0.0989 - but both round to the values already
+    # quoted, so they are left as they stand.)
     render_crop_bias_mm={"x": 0.0, "y": -0.08},
     render_crop_bias_unc_mm={"x": 0.05, "y": 0.10},
     # Render-span gate bounds. Empirical over the seven clean 2026-07-06
@@ -51,9 +74,26 @@ LORCANA = GameSpec(
     # hard cast shadow hugging a dark full-art top edge fakes a sharp
     # "cut" (IMG_6416: top edge measured +2.24mm outside the render,
     # y-total 2.77mm) that per-line edge QA cannot distinguish locally.
+    # These are padded round numbers around the observed range, and the
+    # 2026-08-21 rescaling moves them by <=0.02mm (x_total 0.495..1.139,
+    # y_total 1.038..2.126) - inside the padding and inside the rounding
+    # they are quoted at, so they are left as they stand. Both the bounds
+    # and the spans they gate shrink by the same 1%, so no verdict moves.
     render_span_bounds_mm={"x_total": (0.50, 1.15),
                            "y_total": (1.05, 2.15),
                            "side": (-0.10, 1.90)},
+    # Face-aware cut definition (2026-08-21). Same physical card, same
+    # scanner: the two TAG backs measure 62.864/62.884 x 87.894/87.929mm
+    # and agree with TAG's own dimensions to <=0.010mm, while the FRONTS
+    # of those same two cards measure 0.100/0.107mm wider and 0.180/0.150mm
+    # taller. The card did not change - the full-art cut-edge rim did
+    # (dark on one edge, bright on the other). Half of the excess per side:
+    # 0.05mm in x, 0.08mm in y, carried as UNCERTAINTY, not subtracted as a
+    # correction - two cards on one scanner do not calibrate a bias, and
+    # the rim's sign is not the same on opposite edges.
+    # The back's own term is left at zero: the DIG comparison bounds it
+    # below 0.010mm, under the detector term already in edge_def_px.
+    cut_def_mm={"front": {"x": 0.05, "y": 0.08}},
 )
 
 ALLCARDS_URL = "https://lorcanajson.org/files/current/en/allCards.json"

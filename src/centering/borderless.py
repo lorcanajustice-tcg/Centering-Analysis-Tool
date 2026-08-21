@@ -371,9 +371,17 @@ def analyze_borderless(photo: str | Path, card_id: str, game: GameSpec,
         align = med_err / math.sqrt(max(n_inl, 1)) * 3.0  # conservative
         stat = math.sqrt(stat_edges_r ** 2 + align ** 2) / ppm_r
         persp = abs(shift_x if a_side == "left" else shift_y) * wvar / 2.0 + 0.005
-        ed_a = game.edge_def_px[methods.get(a_side, "step")]
-        ed_b = game.edge_def_px[methods.get(b_side, "step")]
-        ed = math.sqrt(ed_a ** 2 + ed_b ** 2) / 2.0 / inp.px_per_mm
+        # Face-aware cut definition: this path always measures a FRONT.
+        # Per side, because the rim is not the same feature on opposite
+        # edges of a full-art face (dark one side, bright the other), so
+        # the two sides' errors are composed as independent rather than
+        # cancelling - see GameSpec.cut_def_mm.
+        axis = "x" if a_side == "left" else "y"
+        ed_a = game.edge_def_mm("front", methods.get(a_side, "step"), axis,
+                                inp.px_per_mm)
+        ed_b = game.edge_def_mm("front", methods.get(b_side, "step"), axis,
+                                inp.px_per_mm)
+        ed = math.hypot(ed_a, ed_b) / 2.0
         b_unc = bias_unc["x" if a_side == "left" else "y"]
         est_u = math.sqrt(est_extra.get(a_side, 0.0) ** 2
                           + est_extra.get(b_side, 0.0) ** 2)
