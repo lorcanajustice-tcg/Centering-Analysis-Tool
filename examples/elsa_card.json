@@ -12,29 +12,29 @@
       "width": 3024,
       "height": 4032,
       "exif_transposed": false,
-      "px_per_mm": 39.9
+      "px_per_mm": 40.28
     },
     "tilt": {
       "keystone_w_pct": null,
-      "keystone_h_pct": -0.074,
+      "keystone_h_pct": -0.064,
       "pitch_deg": null,
       "yaw_deg": null,
       "total_deg": null,
       "focal_mm_equiv": null,
       "corrected": false,
       "notes": [
-        "full rectification unavailable (missing edges); perspective handled by per-row scale; span scale variation 0.07% bounds the residual effect"
+        "full rectification unavailable (missing edges); perspective handled by per-row scale; span scale variation 0.06% bounds the residual effect"
       ]
     },
     "edge_fits": [
       {
         "edge": "left",
         "method": "texture",
-        "n_points": 38,
-        "n_rejected": 17,
-        "rms_residual_px": 0.88,
-        "angle_deg": 0.541,
-        "bow_px": 2.06,
+        "n_points": 35,
+        "n_rejected": 20,
+        "rms_residual_px": 0.75,
+        "angle_deg": 0.533,
+        "bow_px": 1.45,
         "status": "ok",
         "notes": []
       },
@@ -43,12 +43,12 @@
         "method": "texture",
         "n_points": 18,
         "n_rejected": 37,
-        "rms_residual_px": 0.59,
-        "angle_deg": 0.473,
-        "bow_px": 0.98,
+        "rms_residual_px": 0.6,
+        "angle_deg": 0.474,
+        "bow_px": 0.99,
         "status": "ok",
         "notes": [
-          "partial coverage: 29x insufficient_texture_contrast"
+          "partial coverage: 27x insufficient_texture_contrast"
         ]
       },
       {
@@ -74,7 +74,7 @@
         "bow_px": null,
         "status": "refused",
         "notes": [
-          "insufficient texture contrast between background and card (0/15 coarse lines usable; 15x insufficient_texture_contrast)"
+          "inconsistent coarse edge detections (spread 48px); likely glare bands or background texture non-uniformity"
         ]
       },
       {
@@ -91,11 +91,11 @@
       {
         "edge": "frame_right",
         "method": "frame_peak",
-        "n_points": 44,
-        "n_rejected": 11,
-        "rms_residual_px": 0.89,
-        "angle_deg": 0.112,
-        "bow_px": 1.03,
+        "n_points": 42,
+        "n_rejected": 13,
+        "rms_residual_px": 0.81,
+        "angle_deg": 0.098,
+        "bow_px": 0.72,
         "status": "ok",
         "notes": []
       }
@@ -114,29 +114,29 @@
         "severity": "warning"
       }
     ],
-    "overlay": "/tmp/ca/out/IMG_6342_back_overlay.jpg",
+    "overlay": "fixtures/IMG_6342_back_overlay.jpg",
     "result": {
       "borders_mm": {
         "left": {
-          "value": 2.5953,
+          "value": 2.574,
           "unit": "mm",
           "status": "measured",
           "uncertainty": {
-            "statistical": 0.0044,
-            "perspective": 0.001,
-            "edge_definition": 0.0841,
-            "total": 0.0842
+            "statistical": 0.0041,
+            "perspective": 0.0008,
+            "edge_definition": 0.0833,
+            "total": 0.0834
           }
         },
         "right": {
-          "value": 2.1671,
+          "value": 2.1439,
           "unit": "mm",
           "status": "measured",
           "uncertainty": {
-            "statistical": 0.0049,
-            "perspective": 0.0008,
-            "edge_definition": 0.0841,
-            "total": 0.0842
+            "statistical": 0.0047,
+            "perspective": 0.0007,
+            "edge_definition": 0.0833,
+            "total": 0.0834
           }
         },
         "top": {
@@ -149,21 +149,21 @@
           "value": null,
           "unit": "mm",
           "status": "refused",
-          "refusal_reason": "bottom card edge unmeasurable: insufficient texture contrast between background and card (0/15 coarse lines usable; 15x insufficient_texture_contrast)"
+          "refusal_reason": "bottom card edge unmeasurable: inconsistent coarse edge detections (spread 48px); likely glare bands or background texture non-uniformity"
         }
       },
       "ratio_lr": {
         "axis": "LR",
-        "first_pct": 54.5,
-        "second_pct": 45.5,
-        "display": "54/46",
+        "first_pct": 54.6,
+        "second_pct": 45.4,
+        "display": "55/45",
         "convention": "first=Left share",
         "status": "measured",
         "uncertainty_pts": {
-          "statistical": 0.0701,
-          "perspective": 0.037,
+          "statistical": 0.067,
+          "perspective": 0.032,
           "edge_definition": 1.2532,
-          "total": 1.2557
+          "total": 1.2554
         }
       },
       "ratio_tb": {
@@ -173,7 +173,7 @@
         "display": null,
         "convention": "first=Top share",
         "status": "refused",
-        "refusal_reason": "top card edge unmeasurable: inconsistent coarse edge detections (spread 110px); likely glare bands or background texture non-uniformity; bottom card edge unmeasurable: insufficient texture contrast between background and card (0/15 coarse lines usable; 15x insufficient_texture_contrast)"
+        "refusal_reason": "top card edge unmeasurable: inconsistent coarse edge detections (spread 110px); likely glare bands or background texture non-uniformity; bottom card edge unmeasurable: inconsistent coarse edge detections (spread 48px); likely glare bands or background texture non-uniformity"
       }
     }
   },
@@ -187,15 +187,15 @@
       "width": 3024,
       "height": 4032,
       "exif_transposed": false,
-      "px_per_mm": 39.32
+      "px_per_mm": 39.69
     },
     "tilt": {
-      "keystone_w_pct": 1.776,
-      "keystone_h_pct": -0.834,
-      "pitch_deg": -3.19,
-      "yaw_deg": 2.12,
-      "total_deg": 3.82,
-      "focal_mm_equiv": 93.9,
+      "keystone_w_pct": 1.753,
+      "keystone_h_pct": -0.755,
+      "pitch_deg": -4.76,
+      "yaw_deg": 2.92,
+      "total_deg": 5.58,
+      "focal_mm_equiv": 142.2,
       "corrected": true,
       "notes": []
     },
@@ -203,37 +203,35 @@
       {
         "edge": "left",
         "method": "step",
-        "n_points": 35,
-        "n_rejected": 15,
-        "rms_residual_px": 0.64,
-        "angle_deg": 0.266,
-        "bow_px": 0.28,
+        "n_points": 32,
+        "n_rejected": 18,
+        "rms_residual_px": 0.53,
+        "angle_deg": 0.264,
+        "bow_px": 0.23,
         "status": "ok",
         "notes": []
       },
       {
         "edge": "right",
         "method": "step",
-        "n_points": 33,
-        "n_rejected": 17,
-        "rms_residual_px": 0.51,
-        "angle_deg": -0.463,
-        "bow_px": 0.71,
+        "n_points": 34,
+        "n_rejected": 16,
+        "rms_residual_px": 0.54,
+        "angle_deg": -0.456,
+        "bow_px": 1.01,
         "status": "ok",
         "notes": []
       },
       {
         "edge": "top",
         "method": "step",
-        "n_points": 40,
-        "n_rejected": 10,
-        "rms_residual_px": 2.26,
-        "angle_deg": -0.037,
-        "bow_px": 2.66,
-        "status": "flagged",
-        "notes": [
-          "fit residual 2.26px above 1.5px target"
-        ]
+        "n_points": 24,
+        "n_rejected": 26,
+        "rms_residual_px": 1.12,
+        "angle_deg": 0.026,
+        "bow_px": 1.22,
+        "status": "ok",
+        "notes": []
       },
       {
         "edge": "bottom",
@@ -247,11 +245,11 @@
         "notes": []
       }
     ],
-    "aspect_ratio_measured": 1.3999,
+    "aspect_ratio_measured": 1.3997,
     "corner_angles_deg": {
-      "TL": 89.77,
-      "TR": 89.5,
-      "BR": 89.83,
+      "TL": 89.71,
+      "TR": 89.57,
+      "BR": 89.82,
       "BL": 90.9
     },
     "qa": [
@@ -259,104 +257,109 @@
         "code": "BACKGROUND_NONUNIFORM",
         "message": "background brightness varies strongly across the frame; low-contrast regions are excluded from edge scans",
         "severity": "warning"
+      },
+      {
+        "code": "RENDER_CROP_BIAS_CORRECTED",
+        "message": "calibrated render-crop bias subtracted from the raw shift (x +0.00mm, y -0.08mm; systematic +-0.10mm retained in the uncertainty)",
+        "severity": "info"
       }
     ],
-    "overlay": "/tmp/ca/out/IMG_6341_front_overlay.jpg",
+    "overlay": "fixtures/IMG_6341_front_overlay.jpg",
     "result": {
       "render": {
         "source": "lorcanajson/ravensburger",
-        "url": "https://api.lorcana.ravensburger.com/images/en/challenge2/6_108ebdd6233ebdf6601c91552efb74fe8e3f24bc.jpg",
+        "url": "/sessions/rcw-018cyfwwuv7qao2nkhdhxk2v/mnt/centering-analyzer/card_db/images/7-6-C2.jpg",
         "render_size": [
           1468,
           2048
         ],
-        "n_inliers": 637,
-        "median_reproj_px": 0.83,
+        "n_inliers": 638,
+        "median_reproj_px": 0.84,
         "notes": [
           "card: 6/C2 \u2022 EN \u2022 7"
         ]
       },
       "shift_mm": {
         "x": {
-          "value": -0.2437,
+          "value": -0.2439,
           "unit": "mm",
           "status": "measured",
           "uncertainty": {
             "statistical": 0.0043,
             "perspective": 0.0065,
-            "edge_definition": 0.035,
-            "total": 0.0358
+            "edge_definition": 0.0638,
+            "total": 0.0642
           }
         },
         "y": {
-          "value": 0.2196,
+          "value": 0.2882,
           "unit": "mm",
           "status": "measured",
           "uncertainty": {
             "statistical": 0.0043,
-            "perspective": 0.0064,
-            "edge_definition": 0.035,
-            "total": 0.0358
+            "perspective": 0.0068,
+            "edge_definition": 0.1163,
+            "total": 0.1165
           }
         }
       },
       "shift_convention": "positive x = print displaced toward right card edge; positive y = toward bottom edge",
       "equivalent_ratio_lr": {
         "axis": "LR",
-        "first_pct": 44.9,
-        "second_pct": 55.1,
+        "first_pct": 44.8,
+        "second_pct": 55.2,
         "display": "45/55",
         "convention": "first=Left share",
         "status": "measured",
         "uncertainty_pts": {
           "statistical": 0.09,
-          "perspective": 0.1374,
-          "edge_definition": 0.7348,
-          "total": 0.753
+          "perspective": 0.1377,
+          "edge_definition": 1.3469,
+          "total": 1.3569
         }
       },
       "equivalent_ratio_tb": {
         "axis": "TB",
-        "first_pct": 53.7,
-        "second_pct": 46.3,
-        "display": "54/46",
+        "first_pct": 56.8,
+        "second_pct": 43.2,
+        "display": "57/43",
         "convention": "first=Top share",
         "status": "measured",
         "uncertainty_pts": {
-          "statistical": 0.0714,
-          "perspective": 0.1065,
-          "edge_definition": 0.583,
-          "total": 0.5969
+          "statistical": 0.1,
+          "perspective": 0.1595,
+          "edge_definition": 2.7279,
+          "total": 2.7344
         }
       },
       "per_side_offsets_mm": {
-        "left_outside_render": 0.208,
-        "right_outside_render": 0.696,
-        "top_outside_render": 1.017,
-        "bottom_outside_render": 0.578
+        "left_outside_render": 0.203,
+        "right_outside_render": 0.69,
+        "top_outside_render": 0.989,
+        "bottom_outside_render": 0.573
       },
-      "assumption": "official render crop is symmetric about print centre; only L-R / T-B asymmetries are meaningful, not per-side absolutes"
+      "assumption": "official render crop is layout-locked but NOT symmetric about print centre; a calibrated per-axis crop bias is subtracted from the raw shift (see GameSpec.render_crop_bias_mm). per_side_offsets_mm remain raw render-relative values, not absolute borders"
     }
   },
   "registration_mm": {
     "x": {
-      "value": 0.0296,
+      "value": 0.0289,
       "unit": "mm",
       "status": "measured",
       "uncertainty": {
-        "statistical": 0.0054,
-        "perspective": 0.0066,
-        "edge_definition": 0.069,
-        "total": 0.0695
+        "statistical": 0.0053,
+        "perspective": 0.0065,
+        "edge_definition": 0.0868,
+        "total": 0.0872
       }
     },
     "y": {
       "value": null,
       "unit": "mm",
       "status": "refused",
-      "refusal_reason": "back top unavailable (top card edge unmeasurable: inconsistent coarse edge detections (spread 110px); likely glare bands or background texture non-uniformity); back bottom unavailable (bottom card edge unmeasurable: insufficient texture contrast between background and card (0/15 coarse lines usable; 15x insufficient_texture_contrast))"
+      "refusal_reason": "back top unavailable (top card edge unmeasurable: inconsistent coarse edge detections (spread 110px); likely glare bands or background texture non-uniformity); back bottom unavailable (bottom card edge unmeasurable: inconsistent coarse edge detections (spread 48px); likely glare bands or background texture non-uniformity)"
     }
   },
-  "mirror_consistency": "back L/R 54/46 vs front equivalent 45/55 (mirrored 55.1/44.9): one cut, registration +0.030mm",
+  "mirror_consistency": "back L/R 55/45 vs front equivalent 45/55 (mirrored 55.2/44.8): one cut, registration +0.029mm",
   "qa": []
 }

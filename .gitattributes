@@ -1,0 +1,13 @@
+# The repo is LF everywhere. Working copies reached through a mounted
+# filesystem have picked up CRLF on individual files before now, which
+# shows up as a whole-file diff with byte-identical content. Normalise
+# on checkin so that cannot happen again.
+* text=auto eol=lf
+
+# Binary / already compressed - never touch.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.heic binary
+*.HEIC binary
+*.pdf binary
