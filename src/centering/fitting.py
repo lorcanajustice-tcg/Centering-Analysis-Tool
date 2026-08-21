@@ -19,6 +19,12 @@ from .types import EdgeFitReport, QAFlag
 # threshold sits well above the +-0.1mm accuracy target)
 SHADOW_BAND_MM = 0.25
 
+# colour-edge cross-check: displacement between the brightness edge and the
+# chromaticity edge worth telling the reader about (mm). Sits just above the
+# per-side scatter of either detector and well below the 0.07-0.14mm
+# systematic measured on the 2026-08-21 TAG scans.
+COLOUR_EDGE_MM = 0.05
+
 
 def _hybrid_cross_check(gray, side, line, us, ppm):
     """Signed displacement (mm) of the hybrid cut detector vs the fitted
@@ -44,6 +50,51 @@ def _hybrid_cross_check(gray, side, line, us, ppm):
     disp = (float(hline.v_at(mid)) - float(line.v_at(mid))) / ppm
     inward = 1.0 if side in ("left", "top") else -1.0
     return disp * inward
+
+
+def _colour_edge(chroma, side, approx, us, out_px, in_px, primary, qa, ppm):
+    """Re-measure one card edge on the chromaticity step; adopt it when the
+    background has hue and the colour scan is well supported.
+
+    `primary` is the (line, report, diag, method) tuple from the
+    brightness/texture scanners; the same shape comes back, replaced or not.
+
+    Why a preference rather than an arbitration on residual: both detectors
+    fit a straight line to a straight cut, so both have small residuals -
+    the residual says nothing about WHICH feature was fitted. The
+    chromaticity step is the better estimator of the cut *by construction*
+    whenever the background is coloured, because the soft shadow a card
+    casts onto that background is a brightness ramp reaching outside the cut
+    but leaves hue untouched. The gates below are about the colour signal
+    existing and covering the edge, not about which fit looks tidier.
+    """
+    if chroma is None:
+        return primary
+    cu, cv, cd = E.colour_scan(chroma, side, approx, us,
+                               search_out_px=out_px, search_in_px=in_px)
+    cline, crep = _edge_report(side, "colour", cu, cv, cd)
+    if cline is None:
+        return primary
+    pline = primary[0]
+    if cd.n_ok < 0.6 * max(cd.n_attempted, 1):
+        return primary                      # hue only on part of the edge
+    if pline is not None and cline.n < 0.8 * pline.n:
+        return primary                      # brightness saw more of the cut
+    if pline is not None:
+        mid = float(np.median(us))
+        inward = 1.0 if side in ("left", "top") else -1.0
+        disp = (float(cline.v_at(mid)) - float(pline.v_at(mid))) / ppm * inward
+        if abs(disp) > COLOUR_EDGE_MM:
+            where = "outside" if disp > 0 else "inside"
+            qa.append(QAFlag(
+                "COLOUR_EDGE_ADOPTED",
+                f"{side} edge: the {primary[3]} scan placed the cut "
+                f"{abs(disp):.3f}mm {where} the chromaticity step, which is "
+                "the shadow/edge-rim signature; the background keeps its hue "
+                "in shadow, so the colour edge is taken as the cut",
+                severity="info"))
+    crep.notes.append("chromaticity step (background hue survives shadow)")
+    return (cline, crep, cd, "colour")
 
 
 def _shadow_band_qa(qa, gray, lines, rows, cols, ppm):

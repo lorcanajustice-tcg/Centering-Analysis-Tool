@@ -18,9 +18,9 @@ from .types import (BackResult, EdgeFitReport, Measurement, QAFlag, Ratio,
 from .uncertainty import border_stat_sigma_px, compose_ratio_uncertainty
 # shared fit/gate machinery lives in fitting.py; re-exported here for
 # backward compatibility (historical import site)
-from .fitting import (SHADOW_BAND_MM, _edge_report,  # noqa: F401
-                      _frame_proximity_qa, _hybrid_cross_check, _prefer_fit,
-                      _shadow_band_qa, _thin_fit)
+from .fitting import (SHADOW_BAND_MM, _colour_edge,  # noqa: F401
+                      _edge_report, _frame_proximity_qa, _hybrid_cross_check,
+                      _prefer_fit, _shadow_band_qa, _thin_fit)
 
 _SIDES = ("left", "right", "top", "bottom")
 
@@ -42,6 +42,10 @@ def analyze_back(photo: str | Path, game: GameSpec, out_dir: Optional[str] = Non
             "and edge definition degrade in the bright/shadowed regions"))
 
     # --- coarse localization ---
+    # illumination-invariant colour planes for the chromaticity edge scan
+    # (see fitting._colour_edge); None when the photo is greyscale
+    chroma = E.chromaticity(rgb) if rgb is not None and rgb.ndim == 3 else None
+
     coarse, ppm0 = coarse_locate(gray, game.card_w_mm, game.card_h_mm)
     if ppm0 is None:
         for s in _SIDES:
@@ -104,6 +108,12 @@ def analyze_back(photo: str | Path, game: GameSpec, out_dir: Optional[str] = Non
             line2, rep2 = _edge_report(side, alt, u2, v2, d2)
             line, rep, diag, method = _prefer_fit(
                 (line, rep, diag, method), (line2, rep2, d2, alt))
+        # a coloured background keeps its hue in the shadow it wears at the
+        # cut; brightness does not. Where the colour signal exists and
+        # covers the edge, it defines the cut.
+        line, rep, diag, method = _colour_edge(
+            chroma, side, coarse[side].pos, us, out_mm * ppm0, in_mm * ppm0,
+            (line, rep, diag, method), qa, ppm0)
         methods[side] = method
         if line is not None and line.bow_px and line.bow_px > 3.0:
             qa.append(QAFlag("CURL_SUSPECTED",
@@ -192,6 +202,22 @@ def analyze_back(photo: str | Path, game: GameSpec, out_dir: Optional[str] = Non
         fline, frep = _edge_report(f"frame_{side}", "frame_peak", fu, fv, fdiag)
         flines[side] = fline
         res.edge_fits.append(frep)
+        if fline is not None and fdiag.n_attempted and \
+                fline.n < 0.5 * fdiag.n_attempted:
+            # The printed line is a halftone dot chain crossed by decorative
+            # structure; where fewer than half the scan lines survive, the
+            # survivors are not independent samples of one feature and the
+            # statistical term below understates the scatter. Seen on the
+            # 2026-08-21 TAG scans: at n_scans=55 the L/R ratio sits 1.5
+            # points off its own n_scans=200 value.
+            qa.append(QAFlag(
+                "FRAME_LINE_SPARSE",
+                f"{side} frame line fitted from {fline.n} of "
+                f"{fdiag.n_attempted} scan lines ({fdiag.summary()}); the "
+                "quoted statistical uncertainty assumes independent per-line "
+                "noise and will read optimistically - re-run with a higher "
+                "n_scans on a high-resolution capture",
+                severity="warning"))
 
     # --- borders ---
     ed = game.edge_def_px

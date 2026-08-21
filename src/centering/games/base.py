@@ -36,7 +36,7 @@ class GameSpec:
         "x": 0.03, "y": 0.03})
     # calibrated edge-definition uncertainties (px), fixture-derived
     edge_def_px: dict = field(default_factory=lambda: {
-        "texture": 3.0, "step": 1.0, "frame_peak": 1.5})
+        "texture": 3.0, "step": 1.0, "colour": 1.0, "frame_peak": 1.5})
     # physical-plausibility bounds (mm) for the borderless render-span
     # gate: {"x_total": (lo, hi), "y_total": (lo, hi), "side": (lo, hi)}.
     # The cut always lies OUTSIDE the render (crop >= 0) and the per-axis

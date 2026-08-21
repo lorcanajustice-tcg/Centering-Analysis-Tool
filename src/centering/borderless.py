@@ -21,8 +21,8 @@ import numpy as np
 
 from . import edges as E
 from . import geometry as G
-from .fitting import (_edge_report, _frame_proximity_qa, _prefer_fit,
-                      _shadow_band_qa, _thin_fit)
+from .fitting import (_colour_edge, _edge_report, _frame_proximity_qa,
+                      _prefer_fit, _shadow_band_qa, _thin_fit)
 from .estimate import CAP_MM, rescue_edge
 from .games.base import GameSpec
 from .imgio import load_photo
@@ -131,6 +131,8 @@ def analyze_borderless(photo: str | Path, card_id: str, game: GameSpec,
                 seed_slop_mm = min(slops)
     ppm0 = (x1 - x0) / game.card_w_mm
 
+    chroma = E.chromaticity(rgb) if rgb is not None and rgb.ndim == 3 else None
+
     corners_bg = background_uniformity(gray)
     vals = list(corners_bg.values())
     if max(vals) > 1.8 * max(min(vals), 1e-6):
@@ -166,6 +168,14 @@ def analyze_borderless(photo: str | Path, card_id: str, game: GameSpec,
             line2, rep2 = _edge_report(side, "texture", u2, v2, d2)
             line, rep, diag, methods[side] = _prefer_fit(
                 (line, rep, diag, "step"), (line2, rep2, d2, "texture"))
+        # chromaticity edge: on a coloured background the shadow at the cut
+        # is a brightness ramp but not a hue change, and a full-bleed face
+        # can carry a dark cut-edge rim on one side and a bright one on the
+        # other - both displace a brightness scan, asymmetrically.
+        line, rep, diag, methods[side] = _colour_edge(
+            chroma, side, approx[side], us,
+            seed_slop_mm * ppm0, seed_slop_mm * ppm0,
+            (line, rep, diag, methods[side]), qa, ppm0)
         if line is None:
             # estimate tier: the strict tier refused this edge; attempt an
             # explicitly-labelled rescue (cluster split + hybrid cut

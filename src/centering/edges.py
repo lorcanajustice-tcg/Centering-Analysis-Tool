@@ -8,6 +8,11 @@ Three detectors, per the proven prototype methodology:
   dark card / dark border on a light background). Sub-pixel 50%-threshold
   crossing with linear interpolation; low-contrast lines are excluded, not
   tolerated.
+- colour_scan: chromaticity step. On a COLOURED surface the shadow a card
+  casts is a brightness ramp that starts outside the cut, so a brightness
+  threshold lands outside it; hue survives the shadow, so the hue step is
+  the cut. Refuses when background and card share a hue (white paper), and
+  the caller falls back.
 - frame_peak_scan: printed bright frame line; first peak scanning inward from
   the detected card edge (avoids inner decorative doubled lines); sub-pixel
   centre by intensity-weighted centroid.
@@ -299,17 +304,144 @@ def step_scan(gray: np.ndarray, side: str, approx: float, scan_us: np.ndarray,
     return np.array(us), np.array(vs), diag
 
 
+def chromaticity(rgb: np.ndarray) -> np.ndarray:
+    """Illumination-invariant 2-plane chromaticity, float32 (H, W, 2).
+
+    r/(r+g+b), g/(r+g+b). Scaling all three channels by the same factor -
+    what a shadow, a vignette or an exposure change does to first order -
+    leaves both planes unchanged, so the background's chromaticity is the
+    same in the shadow hugging a card edge as it is out in the open.
+    Brightness is not: that is the whole point.
+    """
+    f = rgb.astype(np.float32)
+    s = f.sum(axis=2) + 1e-3
+    return np.stack([f[:, :, 0] / s, f[:, :, 1] / s], axis=2)
+
+
+def colour_scan(chroma: np.ndarray, side: str, approx: float,
+                scan_us: np.ndarray, search_out_px: float, search_in_px: float,
+                band: int = 3, min_sep: float = 0.12, snr_min: float = 8.0,
+                sustain: int = 6):
+    """Sub-pixel card edge from the CHROMATICITY step, not the brightness step.
+
+    Motivation (2026-08-21, TAG scans): a card lying on a coloured surface
+    casts a soft shadow onto that surface. In brightness that shadow is a
+    ramp tens of pixels wide starting outside the cut, and a 50%-of-
+    (background, card) threshold lands part-way up it - OUTSIDE the cut.
+    Measured on two TAG scans: the brightness edge sits 4.7-5.3px (~0.07mm)
+    outside the chromatic edge on every side of a card back, and 8.8-9.6px
+    outside on the LEFT of a card front while sitting ~0.8px INSIDE on the
+    right (that face shows a dark cut-edge rim on one side and a bright one
+    on the other). The symmetric part inflates both margins; the asymmetric
+    part moves the card centre, and with it the centering ratio.
+
+    Shadowed background keeps its hue, so the chromatic profile stays flat
+    right up to the cut. `chroma` is the output of `chromaticity()`.
+    Needs a background whose hue differs from the card's: a refusal means
+    "no colour signal here", and the caller falls back to brightness.
+
+    Gates. `min_sep` is a distance in the normalised (r, g) plane, where
+    the achromatic point sits at (1/3, 1/3) and a fully saturated primary
+    ~0.5 away; 0.12 therefore asks the two surfaces to differ by about a
+    quarter of the maximum possible chromatic contrast - a different hue,
+    not a slightly tinted grey. Measured: the TAG scans' orange backing
+    against this card reaches 0.18-0.31 on every side of all four scans,
+    while the white-paper fixture captures reach 0.001-0.10, so the gate
+    has ~2x headroom on both sides of a real gap. `snr_min` additionally
+    requires the step to stand clear of the chroma noise on the background
+    side, which is what protects a dark, noisy capture on a coloured mat.
+    """
+    us, vs = [], []
+    diag = ScanDiagnostics()
+    trans = []
+    for u in scan_us:
+        diag.n_attempted += 1
+        if side in ("left", "top"):
+            lo, hi = approx - search_out_px, approx + search_in_px
+        else:
+            lo, hi = approx - search_in_px, approx + search_out_px
+        b0, coords = _profile_band(chroma[:, :, 0], side, u, lo, hi, band)
+        b1, _ = _profile_band(chroma[:, :, 1], side, u, lo, hi, band)
+        if b0.shape[1] < 40:
+            diag.note_reject("band_truncated")
+            continue
+        p0, p1 = b0.mean(axis=0), b1.mean(axis=0)
+        n = len(p0)
+        w_out, w_in = _level_windows(n, _outside_count(coords, side, approx), 4)
+        o0, o1 = float(np.median(p0[:w_out])), float(np.median(p1[:w_out]))
+        i0, i1 = float(np.median(p0[-w_in:])), float(np.median(p1[-w_in:]))
+        d0, d1 = i0 - o0, i1 - o1
+        sep = float(np.hypot(d0, d1))
+        if sep < min_sep:
+            diag.note_reject("insufficient_chroma")
+            continue
+        # project onto the background->card chromaticity axis: 0 outside,
+        # `sep` inside, monotone across the cut whatever the hues are
+        prof = (p0 - o0) * (d0 / sep) + (p1 - o1) * (d1 / sep)
+        noise = 1.4826 * float(np.median(np.abs(prof[:w_out]
+                                                - np.median(prof[:w_out]))))
+        if sep < snr_min * noise:
+            diag.note_reject("chroma_step_below_noise")
+            continue
+        thr = 0.5 * sep
+        above = prof > thr
+        idx, run, i = None, 0, 0
+        while i < n:
+            run = run + 1 if above[i] else 0
+            if run >= sustain:
+                cand = i - sustain + 1
+                tail = prof[cand:min(cand + 30, n)]
+                if np.median(tail) >= 0.7 * sep:
+                    idx = cand
+                    break
+                diag.note_reject("no_card_plateau")
+                run = 0
+            i += 1
+        if idx is None or idx == 0:
+            diag.note_reject("no_crossing")
+            continue
+        a, b = prof[idx - 1], prof[idx]
+        if b <= a:
+            diag.note_reject("non_monotonic_at_edge")
+            continue
+        frac = float(np.clip((thr - a) / (b - a), 0, 1))
+        pos = coords[idx - 1] + frac * (coords[idx] - coords[idx - 1])
+        j0 = idx - 1
+        while j0 > 0 and prof[j0] > 0.2 * sep:
+            j0 -= 1
+        j1 = idx
+        while j1 < n - 1 and prof[j1] < 0.8 * sep:
+            j1 += 1
+        trans.append(abs(j1 - j0))
+        us.append(float(u))
+        vs.append(float(pos))
+        diag.n_ok += 1
+    if trans:
+        diag.median_transition_px = float(np.median(trans))
+    return np.array(us), np.array(vs), diag
+
+
 def frame_peak_scan(gray: np.ndarray, side: str, edge_line, scan_us: np.ndarray,
                     px_per_mm: float, min_peak: float = 45.0,
                     search_mm: tuple = (0.5, 6.0), centroid_half: int = 5,
-                    band: int = 3):
+                    band: int = 3, rescue_floor: float = 0.45,
+                    modal_window_mm: float = 0.25):
     """First bright peak scanning INWARD from the detected card edge.
 
     edge_line: FittedLine of the physical card edge for this side; scanning
     starts from its per-row position, which anchors past the sleeve/edge blur
     and stops decorative inner doubled lines from being picked up.
+
+    modal_window_mm: detections further than this from the MODAL cut-to-line
+    distance are dropped before the fit - they are decorative structure
+    crossing the search band, not the frame line.
+
+    rescue_floor: when NO peak clears the absolute `min_peak`, the scan line
+    is retried against a prominence threshold (half the window's strongest
+    excess, floored at rescue_floor*min_peak) rather than refused. Lines that
+    already found a peak never reach it.
     """
-    us, vs = [], []
+    us, vs, offs = [], [], []
     diag = ScanDiagnostics()
     for u in scan_us:
         diag.n_attempted += 1
@@ -326,17 +458,32 @@ def frame_peak_scan(gray: np.ndarray, side: str, edge_line, scan_us: np.ndarray,
         prof = block.mean(axis=0)
         base = float(np.median(prof))
         exc = prof - base
-        cand = np.where(exc >= min_peak)[0]
+        thr = min_peak
+        cand = np.where(exc >= thr)[0]
         if len(cand) == 0:
-            diag.note_reject("no_peak_above_threshold")
-            continue
+            # Rescue pass. min_peak is an ABSOLUTE brightness excess, so a
+            # frame line printed or scanned a little duller than the
+            # calibration card's refuses the whole side even when it is
+            # plainly the dominant feature in the window: the 2026-08-21 TAG
+            # back's top line reaches 43 against a min_peak of 45 and its
+            # T/B was refused outright. Retry keyed on PROMINENCE instead -
+            # the peak must still stand clear of everything else in the
+            # window. Strictly additive: a side that already found a peak
+            # never reaches this branch, so its result is unchanged.
+            rescue = max(0.5 * float(exc.max()), min_peak * rescue_floor)
+            cand = np.where(exc >= rescue)[0]
+            if len(cand) == 0:
+                diag.note_reject("no_peak_above_threshold")
+                continue
+            thr = rescue
+            diag.note_reject("min_peak_rescued")
         # first contiguous group scanning inward (profile is ordered out->in
         # only for left/top; for right/bottom _profile_band already flipped
         # it so index 0 is the OUTER end -- which is what we want: first
         # peak encountered moving inward from the edge)
         first = cand[0]
         grp_end = first
-        while grp_end + 1 < len(prof) and exc[grp_end + 1] >= min_peak * 0.5:
+        while grp_end + 1 < len(prof) and exc[grp_end + 1] >= thr * 0.5:
             grp_end += 1
         pk = first + int(np.argmax(exc[first:grp_end + 1]))
         a, b = max(0, pk - centroid_half), min(len(prof), pk + centroid_half + 1)
@@ -347,8 +494,33 @@ def frame_peak_scan(gray: np.ndarray, side: str, edge_line, scan_us: np.ndarray,
         pos = float(np.sum(coords[a:b] * w) / w.sum())
         us.append(float(u))
         vs.append(pos)
+        offs.append(abs(pos - e))
         diag.n_ok += 1
-    return np.array(us), np.array(vs), diag
+    us, vs, offs = np.array(us), np.array(vs), np.array(offs)
+    if len(us) >= 8 and modal_window_mm:
+        # A printed frame line runs PARALLEL to the cut: its distance from
+        # the card edge is the same all along the side (a print skewed
+        # against the cut varies it by ~0.1mm across a card, far inside the
+        # window below). Decorative structure crossing the search band - the
+        # Lorcana back's corner chevrons and its centre notch, which between
+        # them own about a third of the top and bottom scan lines - is a
+        # different feature at a different distance, and enough of it drags
+        # the LTS fit into an "inconsistent detections" refusal. Keep the
+        # modal distance and drop the rest, so the line fit sees the one
+        # feature it assumes it is looking at.
+        binw = 0.05 * px_per_mm
+        bins = np.arange(offs.min(), offs.max() + binw, binw)
+        if len(bins) >= 2:
+            hist, _ = np.histogram(offs, bins=bins)
+            k = int(np.argmax(hist))
+            mode = 0.5 * (bins[k] + bins[k + 1])
+            keep = np.abs(offs - mode) <= modal_window_mm * px_per_mm
+            if keep.sum() >= 8:
+                diag.n_ok = int(keep.sum())
+                for _ in range(int((~keep).sum())):
+                    diag.note_reject("off_modal_frame_distance")
+                us, vs = us[keep], vs[keep]
+    return us, vs, diag
 
 
 def _dir_profile(gray32: np.ndarray, p, n_dir, offs: np.ndarray, band: int,
