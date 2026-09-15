@@ -48,6 +48,15 @@ FLAGS: dict[str, tuple[str, str]] = {
         "Treat this number as approximate. A cleaner photo - plain white "
         "paper, even light, no sleeve - usually turns it into a proper "
         "measurement."),
+    "EDGE_RELOCATED": (
+        "One edge was found on a second look",
+        "Nothing to do - it was measured normally. If you drew the box "
+        "yourself, a tighter box around the card saves the second look."),
+    "EDGE_INFERRED": (
+        "One edge was worked out from the other three",
+        "The other direction is unaffected. For a proper reading in this "
+        "direction too, re-shoot so that edge stands out from the "
+        "background - plain white paper, even light, no sleeve."),
     "EDGE_PARTIALLY_EXCLUDED": (
         "Part of this edge had to be skipped",
         "Glare, a shadow, or a background too close in colour to the card. "

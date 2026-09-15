@@ -26,12 +26,19 @@ from .fitting import (_colour_edge, _edge_report, _frame_proximity_qa,
 from .estimate import CAP_MM, rescue_edge
 from .games.base import GameSpec
 from .imgio import load_photo
+from .infer import OPPOSITE, infer_missing_edge
 from .locate import background_uniformity, card_component_bbox, coarse_locate
 from .overlay import C_EDGE, C_FRAME, Overlay
 from .types import (BorderlessResult, EdgeFitReport, Measurement, QAFlag,
                     Ratio, RenderMatchReport, TiltReport, Uncertainty)
 from .render_match import match_to_render
 from .uncertainty import compose_ratio_uncertainty
+
+# fourth-edge handling (see infer.py)
+RESCAN_MIN_MM = 1.0      # smallest half-window for the second look
+RESCAN_K = 3.0           # second-look window / agreement, in sigmas
+INFER_MAX_SEED_DEV_MM = 10.0  # constructed edge vs where the card was found
+
 
 _SIDES = ("left", "right", "top", "bottom")
 
@@ -157,14 +164,18 @@ def analyze_borderless(photo: str | Path, card_id: str, game: GameSpec,
     cols = np.linspace(x0 + 0.15 * (x1 - x0), x0 + 0.85 * (x1 - x0), n_scans)
     approx = {"left": x0, "right": x1, "top": y0, "bottom": y1}
     lines, reports, methods, est_extra = {}, {}, {}, {}
-    for side in _SIDES:
+
+    def _measure_side(side, approx_v, s_out, s_in, qa):
+        """Fit one cut edge: strict tier (step, texture, colour), then the
+        estimate tier. Returns (line|None, report, diag, method, est_unc)."""
         us = rows if side in ("left", "right") else cols
+        est_unc = None
         u_ok, v_ok, diag = E.step_scan(
-            gray, side, approx[side], us,
-            search_out_px=seed_slop_mm * ppm0,
-            search_in_px=seed_slop_mm * ppm0)
+            gray, side, approx_v, us,
+            search_out_px=s_out,
+            search_in_px=s_in)
         line, rep = _edge_report(side, "step", u_ok, v_ok, diag)
-        methods[side] = "step"
+        method = "step"
         u2, v2, d2 = np.array([]), np.array([]), None
         if _thin_fit(line, diag):
             # a black border on a dark textured mat has no brightness step
@@ -173,20 +184,20 @@ def analyze_borderless(photo: str | Path, card_id: str, game: GameSpec,
             # lines. The texture transition marks the same cut; keep
             # whichever fit the edge actually supports.
             u2, v2, d2 = E.texture_scan(
-                gray, side, approx[side], us,
-                search_out_px=seed_slop_mm * ppm0,
-                search_in_px=seed_slop_mm * ppm0)
+                gray, side, approx_v, us,
+                search_out_px=s_out,
+                search_in_px=s_in)
             line2, rep2 = _edge_report(side, "texture", u2, v2, d2)
-            line, rep, diag, methods[side] = _prefer_fit(
+            line, rep, diag, method = _prefer_fit(
                 (line, rep, diag, "step"), (line2, rep2, d2, "texture"))
         # chromaticity edge: on a coloured background the shadow at the cut
         # is a brightness ramp but not a hue change, and a full-bleed face
         # can carry a dark cut-edge rim on one side and a bright one on the
         # other - both displace a brightness scan, asymmetrically.
-        line, rep, diag, methods[side] = _colour_edge(
-            chroma, side, approx[side], us,
-            seed_slop_mm * ppm0, seed_slop_mm * ppm0,
-            (line, rep, diag, methods[side]), qa, ppm0)
+        line, rep, diag, method = _colour_edge(
+            chroma, side, approx_v, us,
+            s_out, s_in,
+            (line, rep, diag, method), qa, ppm0)
         if line is None:
             # estimate tier: the strict tier refused this edge; attempt an
             # explicitly-labelled rescue (cluster split + hybrid cut
@@ -211,8 +222,8 @@ def analyze_borderless(photo: str | Path, card_id: str, game: GameSpec,
                     bow_px=line.bow_px, status="estimated",
                     notes=[f"could not be measured properly: "
                            f"{strict_notes}", est.note])
-                methods[side] = mname
-                est_extra[side] = est.extra_unc_mm
+                method = mname
+                est_unc = est.extra_unc_mm
                 qa.append(QAFlag(
                     "EDGE_ESTIMATED",
                     f"The {side} edge was too unclear to measure properly, "
@@ -233,14 +244,126 @@ def analyze_borderless(photo: str | Path, card_id: str, game: GameSpec,
                              f"{diag.n_attempted} readings had to be thrown "
                              f"out ({diag.summary()}). The measurement uses "
                              "the clean stretches only."))
+        return line, rep, diag, method, est_unc
+
+    for side in _SIDES:
+        line, rep, _, methods[side], est_u = _measure_side(
+            side, approx[side], seed_slop_mm * ppm0, seed_slop_mm * ppm0, qa)
+        if est_u is not None:
+            est_extra[side] = est_u
         lines[side], reports[side] = line, rep
         res.edge_fits.append(rep)
+
+    def _fourth_edge(side):
+        """Three measured edges and the card's known size place the fourth.
+
+        Without it the whole front refuses, even the axis whose two edges
+        were measured cleanly. First the missing edge is re-scanned where
+        the construction says it is (a sloppy seed - a hand-drawn box, a
+        case edge - is the usual reason it was missed); only if that also
+        fails is the constructed line itself used, as an estimate."""
+        opp_side = OPPOSITE[side]
+        p1, p2 = (("top", "bottom") if side in ("left", "right")
+                  else ("left", "right"))
+        ax_p = "y" if side in ("left", "right") else "x"
+        ax_o = "x" if side in ("left", "right") else "y"
+
+        def _ed(s, ax):
+            return math.hypot(
+                game.edge_def_mm("front", methods.get(s, "step"), ax, ppm0),
+                est_extra.get(s, 0.0))
+
+        opp = lines[opp_side]
+        inf, why = infer_missing_edge(
+            side, lines, game.card_w_mm, game.card_h_mm, (Wimg, Himg),
+            sep_unc_mm=math.hypot(_ed(p1, ax_p), _ed(p2, ax_p)),
+            opp_unc_mm=math.hypot(
+                _ed(opp_side, ax_o),
+                opp.rms / math.sqrt(max(opp.n, 1)) / ppm0))
+        rep = reports[side]
+        if inf is None:
+            rep.notes.append(f"tried to work it out from the other three "
+                             f"edges, but {why}")
+            return
+        mid_u = 0.5 * sum(inf.line.u_range)
+        v_inf = float(inf.line.v_at(mid_u))
+        seed_dev_mm = abs(v_inf - approx[side]) / inf.ppm
+
+        # 1) re-scan around the constructed position, when it is far
+        # enough from the original seed that the first scan missed it
+        win = 0.0
+        if seed_dev_mm > 0.5 * seed_slop_mm:
+            tilt_px = abs(inf.line.m) * 0.5 * (inf.line.u_range[1]
+                                               - inf.line.u_range[0])
+            win = max(RESCAN_MIN_MM, RESCAN_K * inf.extra_unc_mm) \
+                * inf.ppm + tilt_px
+            lim = Wimg if side in ("left", "right") else Himg
+            win = min(win, v_inf - 1.0, lim - 2.0 - v_inf)
+        if win > 0.5 * inf.ppm:
+            qa2 = []
+            line2, rep2, _, meth2, est2 = _measure_side(
+                side, v_inf, win, win, qa2)
+            if line2 is not None and est2 is None:
+                d_mm = abs(float(line2.v_at(mid_u)) - v_inf) / inf.ppm
+                if d_mm <= RESCAN_K * inf.extra_unc_mm:
+                    rep2.notes.append(
+                        f"found on a second look, {seed_dev_mm:.1f}mm from "
+                        "where the card was first placed, by searching "
+                        "where the other three edges said it must be "
+                        f"(it landed {d_mm:.2f}mm from that prediction)")
+                    qa.extend(qa2)
+                    qa.append(QAFlag(
+                        "EDGE_RELOCATED",
+                        f"The {side} edge was not where the card was first "
+                        f"placed - it was {seed_dev_mm:.1f}mm away. It was "
+                        "found by looking where the other three edges and "
+                        "the card's size said it had to be, and then "
+                        "measured normally.", severity="info"))
+                    res.edge_fits[res.edge_fits.index(rep)] = rep2
+                    reports[side], lines[side] = rep2, line2
+                    methods[side] = meth2
+                    return
+                rep.notes.append(
+                    f"a second look found an edge {d_mm:.2f}mm from where "
+                    "the other three edges said it must be, which is too "
+                    "far to trust")
+
+        # 2) fall back to the constructed line itself
+        if seed_dev_mm > INFER_MAX_SEED_DEV_MM:
+            rep.notes.append(
+                f"working it out from the other three edges puts it "
+                f"{seed_dev_mm:.1f}mm from where the card was found, more "
+                f"than the {INFER_MAX_SEED_DEV_MM:.0f}mm allowed")
+            return
+        strict_notes = "; ".join(rep.notes) or "refused"
+        new_rep = EdgeFitReport(
+            edge=side, method="inferred", n_points=0, n_rejected=0,
+            rms_residual_px=None,
+            angle_deg=inf.line.angle_from_nominal_deg(),
+            bow_px=None, status="estimated",
+            notes=[f"could not be measured: {strict_notes}", inf.note])
+        res.edge_fits[res.edge_fits.index(rep)] = new_rep
+        reports[side], lines[side] = new_rep, inf.line
+        methods[side] = "inferred"
+        est_extra[side] = inf.extra_unc_mm
+        same = "left-to-right" if ax_p == "y" else "top-to-bottom"
+        other = "top-to-bottom" if ax_p == "y" else "left-to-right"
+        qa.append(QAFlag(
+            "EDGE_INFERRED",
+            f"The {side} edge could not be seen well enough to measure, so "
+            f"its position was {inf.note}. The {other} result does not "
+            f"use it; the {same} result does, so it is marked as an "
+            "estimate.",
+            severity="warning"))
 
     _frame_proximity_qa(qa, lines, Wimg, Himg,
                         extra=" In testing this moved results by about "
                               "0.1mm.")
 
     missing = [s for s in _SIDES if lines[s] is None]
+    if len(missing) == 1:
+        _fourth_edge(missing[0])
+        missing = [s for s in _SIDES if lines[s] is None]
     if missing:
         for ax, (a, b) in {"x": ("left", "right"), "y": ("top", "bottom")}.items():
             bad = [s for s in (a, b) if lines[s] is None]
@@ -318,7 +441,12 @@ def analyze_borderless(photo: str | Path, card_id: str, game: GameSpec,
         return res
 
     # --- hybrid cut cross-check (shadow-band detection; QA only) ---
-    _shadow_band_qa(qa, gray, lines, rows, cols, inp.px_per_mm)
+    # (an inferred edge was never read off the photo, so there is no
+    # detection for the cross-check to disagree with)
+    _shadow_band_qa(qa, gray,
+                    {k: v for k, v in lines.items()
+                     if methods.get(k) != "inferred"},
+                    rows, cols, inp.px_per_mm)
 
     # --- render match ---
     render_gray, render_rgb, url, card = render_source.get_render(card_id)

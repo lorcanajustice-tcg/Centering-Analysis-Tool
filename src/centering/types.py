@@ -7,7 +7,9 @@ from typing import Any, Optional
 
 from .plain import advice_for, title_for
 
-SCHEMA_VERSION = "1.0"
+# 1.1 (v0.3.1): added qa[].title, qa[].advice and refusal_advice. Purely
+# additive - every 1.0 field is still present and unchanged.
+SCHEMA_VERSION = "1.1"
 
 
 def _r(x: Optional[float], nd: int = 4) -> Optional[float]:

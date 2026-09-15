@@ -151,6 +151,11 @@ together:
   clearly-labelled method could recover it. Always shown with a ≈ and
   always carrying a bigger margin of error. If that margin grows past
   about the width of a grading band, the answer is refused instead.
+  On a front, if one edge cannot be seen at all, the other three and the
+  card's known size say where it must be. The tool looks for it again
+  there first - a box drawn a little too big is the usual reason it was
+  missed - and only if that fails uses the worked-out position, as an
+  estimate. Either way the other direction is no longer held back by it.
 - **Not measured** — with the reason, in plain words, and what to try.
 
 It also watches for things that quietly ruin measurements and tells you
