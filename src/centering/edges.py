@@ -33,6 +33,15 @@ import numpy as np
 
 from .plain import reject_phrase
 
+# Shortest profiles the scanners accept (samples = px). Their level
+# estimates need this many samples however large the card is in the photo,
+# so callers must never hand them a narrower window: at 7 px/mm a 2.5mm
+# seed slop is only 18px each side.
+MIN_STEP_PROFILE_PX = 40      # step_scan, colour_scan
+MIN_TEXTURE_PROFILE_PX = 60   # texture_scan
+# half-window (each side of the seed) that lets every scanner run
+MIN_SCAN_HALF_WINDOW_PX = MIN_TEXTURE_PROFILE_PX // 2
+
 
 @dataclass
 class ScanDiagnostics:
@@ -145,7 +154,7 @@ def texture_scan(gray: np.ndarray, side: str, approx: float,
         else:
             lo, hi = approx - search_in_px, approx + search_out_px
         block, coords = _profile_band(gray, side, u, lo, hi, band)
-        if block.shape[0] < band // 2 or block.shape[1] < 60:
+        if block.shape[0] < band // 2 or block.shape[1] < MIN_TEXTURE_PROFILE_PX:
             diag.note_reject("band_truncated")
             continue
         prof = _smooth(block.std(axis=0), smooth_w)
@@ -233,7 +242,7 @@ def step_scan(gray: np.ndarray, side: str, approx: float, scan_us: np.ndarray,
         else:
             lo, hi = approx - search_in_px, approx + search_out_px
         block, coords = _profile_band(gray, side, u, lo, hi, band)
-        if block.shape[1] < 40:
+        if block.shape[1] < MIN_STEP_PROFILE_PX:
             diag.note_reject("band_truncated")
             continue
         prof = block.mean(axis=0)
@@ -367,7 +376,7 @@ def colour_scan(chroma: np.ndarray, side: str, approx: float,
             lo, hi = approx - search_in_px, approx + search_out_px
         b0, coords = _profile_band(chroma[:, :, 0], side, u, lo, hi, band)
         b1, _ = _profile_band(chroma[:, :, 1], side, u, lo, hi, band)
-        if b0.shape[1] < 40:
+        if b0.shape[1] < MIN_STEP_PROFILE_PX:
             diag.note_reject("band_truncated")
             continue
         p0, p1 = b0.mean(axis=0), b1.mean(axis=0)

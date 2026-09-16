@@ -23,7 +23,7 @@ from . import edges as E
 from . import geometry as G
 from .fitting import (_colour_edge, _edge_report, _frame_proximity_qa,
                       _prefer_fit, _shadow_band_qa, _thin_fit)
-from .estimate import CAP_MM, rescue_edge
+from .estimate import BASE_SYSTEMATIC_MM, CAP_MM, rescue_edge
 from .games.base import GameSpec
 from .imgio import load_photo
 from .infer import OPPOSITE, infer_missing_edge
@@ -35,9 +35,54 @@ from .render_match import match_to_render
 from .uncertainty import compose_ratio_uncertainty
 
 # fourth-edge handling (see infer.py)
+# hybrid cut detector as a last resort, anchored on a construction
+CUT_RESCUE_WINDOWS_MM = (1.2, 2.0)
+CUT_RESCUE_RMS_PX = 1.5
+CUT_RESCUE_AGREE_MM = 0.10
 RESCAN_MIN_MM = 1.0      # smallest half-window for the second look
 RESCAN_K = 3.0           # second-look window / agreement, in sigmas
+# ...but never demand agreement tighter than this: the edge found on the
+# second look is a full strict-tier fit, and still has to pass the
+# leaning-edge check and the render-span gate afterwards. Belle IMG_2033's
+# real bottom lands 1.37mm from the pair-scaled prediction (the photo is a
+# 9:16 re-encode; its quad is ~1% taller than a card).
+RESCAN_AGREE_MIN_MM = 1.5
 INFER_MAX_SEED_DEV_MM = 10.0  # constructed edge vs where the card was found
+
+# leaning-edge check (official-picture space). Good fixture fronts: every
+# edge within 0.29 deg of the shared rotation (2026-09-15, six fronts).
+# Belle IMG_2033's right edge (a case edge): 1.56 deg.
+LEAN_MAX_DEG = 1.0
+LEAN_MIN_INLIERS = 80  # below this the alignment is too loose to judge
+
+
+def _lean_check(Hpr, lines, methods):
+    """Measured edges whose rotation in the official picture's frame
+    differs from the shared (median) rotation by more than LEAN_MAX_DEG,
+    as {side: plain-English reason}."""
+    rot = {}
+    for side, line in lines.items():
+        if line is None or methods.get(side) == "inferred":
+            continue
+        pts = G.transform_points(Hpr, line.points(60))
+        if side in ("left", "right"):
+            m = np.polyfit(pts[:, 1], pts[:, 0], 1)[0]
+            rot[side] = -math.degrees(math.atan(m))
+        else:
+            m = np.polyfit(pts[:, 0], pts[:, 1], 1)[0]
+            rot[side] = math.degrees(math.atan(m))
+    if len(rot) < 3:
+        return {}
+    ref = float(np.median(list(rot.values())))
+    out = {}
+    for side, r in rot.items():
+        if abs(r - ref) > LEAN_MAX_DEG:
+            out[side] = (
+                f"leans {abs(r - ref):.1f} degrees away from the other "
+                "edges once the photo's angle is taken out, and a real "
+                "card's edges are square to each other, so it is not the "
+                "edge of the card")
+    return out
 
 
 _SIDES = ("left", "right", "top", "bottom")
@@ -53,7 +98,8 @@ RESHOOT = ("Re-shoot the card flat and unsleeved on plain white paper, with "
 # axes only ever validated the x axis.
 
 
-def _render_span_violations(offsets_mm: dict, bounds: dict) -> dict:
+def _render_span_violations(offsets_mm: dict, bounds: dict,
+                             slack_mm: Optional[dict] = None) -> dict:
     """Physical-plausibility check of the fitted quad against the render.
 
     The cut always lies OUTSIDE the render bounds (the render is cropped
@@ -64,17 +110,28 @@ def _render_span_violations(offsets_mm: dict, bounds: dict) -> dict:
     these bounds even when its fit statistics look clean (a cast shadow's
     outer boundary is as sharp as a real cut and tonally continuous with
     dark card art). Returns {axis: reason}; empty when plausible.
+
+    `slack_mm` widens the bounds for edges that were only estimated or
+    worked out ({side: mm}, typically 2 sigma of the edge's own extra
+    uncertainty): the gate asks whether the edge COULD be the cut, and an
+    estimate is only claimed to within its margin.
     """
     out = {}
-    s_lo, s_hi = bounds["side"]
+    slack_mm = slack_mm or {}
     for ax, (a, b) in (("x", ("left", "right")), ("y", ("top", "bottom"))):
         oa = offsets_mm[f"{a}_outside_render"]
         ob = offsets_mm[f"{b}_outside_render"]
         t_lo, t_hi = bounds[f"{ax}_total"]
-        probs = [f"the {n} edge sits {v:+.2f}mm outside the official "
-                 f"picture, where every real card falls between "
-                 f"{s_lo:+.2f} and {s_hi:+.2f}mm"
-                 for n, v in ((a, oa), (b, ob)) if not s_lo <= v <= s_hi]
+        tot_slack = slack_mm.get(a, 0.0) + slack_mm.get(b, 0.0)
+        t_lo, t_hi = t_lo - tot_slack, t_hi + tot_slack
+        probs = []
+        for n, v in ((a, oa), (b, ob)):
+            s_lo = bounds["side"][0] - slack_mm.get(n, 0.0)
+            s_hi = bounds["side"][1] + slack_mm.get(n, 0.0)
+            if not s_lo <= v <= s_hi:
+                probs.append(f"the {n} edge sits {v:+.2f}mm outside the "
+                             f"official picture, where every real card "
+                             f"falls between {s_lo:+.2f} and {s_hi:+.2f}mm")
         if not t_lo <= oa + ob <= t_hi:
             probs.append(f"the {a} and {b} edges together sit "
                          f"{oa + ob:.2f}mm outside the official picture, "
@@ -205,13 +262,15 @@ def analyze_borderless(photo: str | Path, card_id: str, game: GameSpec,
             # strict refusal, the edge fit is status="estimated", and the
             # axis result is capped at CAP_MM total uncertainty.
             strict_notes = "; ".join(rep.notes) or "refused"
-            for mname, uu, vv in (("step", u_ok, v_ok), ("texture", u2, v2)):
+            tries = [("step", u_ok, v_ok), ("texture", u2, v2)]
+            for mname, uu, vv in tries:
                 if len(uu) < 4:
                     continue
                 est, why = rescue_edge(gray, side, uu, vv, us, ppm0)
                 if est is None:
-                    rep.notes.append(f"tried to estimate it instead, but "
-                                     f"{why}")
+                    note = f"tried to estimate it instead, but {why}"
+                    if note not in rep.notes:
+                        rep.notes.append(note)
                     continue
                 line = est.line
                 rep = EdgeFitReport(
@@ -247,15 +306,18 @@ def analyze_borderless(photo: str | Path, card_id: str, game: GameSpec,
         return line, rep, diag, method, est_unc
 
     for side in _SIDES:
+        # the scanners need a minimum number of samples whatever the
+        # resolution: at ~7 px/mm a 2.5mm window is too short to read
+        win0 = max(seed_slop_mm * ppm0, E.MIN_SCAN_HALF_WINDOW_PX)
         line, rep, _, methods[side], est_u = _measure_side(
-            side, approx[side], seed_slop_mm * ppm0, seed_slop_mm * ppm0, qa)
+            side, approx[side], win0, win0, qa)
         if est_u is not None:
             est_extra[side] = est_u
         lines[side], reports[side] = line, rep
         res.edge_fits.append(rep)
 
-    def _fourth_edge(side):
-        """Three measured edges and the card's known size place the fourth.
+    def _fourth_edge(side, force_rescan=False, no_rescan=False):
+        """The opposite edge and the card's known size place a missing one.
 
         Without it the whole front refuses, even the axis whose two edges
         were measured cleanly. First the missing edge is re-scanned where
@@ -273,16 +335,42 @@ def analyze_borderless(photo: str | Path, card_id: str, game: GameSpec,
                 game.edge_def_mm("front", methods.get(s, "step"), ax, ppm0),
                 est_extra.get(s, 0.0))
 
-        opp = lines[opp_side]
+        # constructed edges are never inputs to another construction
+        usable = {k: (v if methods.get(k) != "inferred" else None)
+                  for k, v in lines.items()}
+        opp = usable[opp_side]
+        if opp is None:
+            reports[side].notes.append(
+                "the edge opposite it was not measured either, so its "
+                "position could not be worked out")
+            return
+        kw = {}
+        if n_inl >= LEAN_MIN_INLIERS:
+            kw = {"H_photo_to_render": Hpr,
+                  "h_unc_mm": med_err / math.sqrt(max(n_inl, 1)) * 3.0
+                  / ppm_r}
+            bounds = getattr(game, "render_span_bounds_mm", None)
+            if bounds:
+                # the picture's crop inside the cut is layout-locked, so
+                # its own size gives a scale: good to ~0.5%
+                ax = "x" if side in ("left", "right") else "y"
+                t_lo, t_hi = bounds[f"{ax}_total"]
+                dim = game.card_w_mm if ax == "x" else game.card_h_mm
+                pic_mm = dim - 0.5 * (t_lo + t_hi)
+                kw["frame_ppm"] = (Wr if ax == "x" else Hr) / pic_mm
+                kw["frame_ppm_rel_unc"] = 0.5 * (t_hi - t_lo) / pic_mm
+        pair_ok = usable[p1] is not None and usable[p2] is not None
         inf, why = infer_missing_edge(
-            side, lines, game.card_w_mm, game.card_h_mm, (Wimg, Himg),
-            sep_unc_mm=math.hypot(_ed(p1, ax_p), _ed(p2, ax_p)),
+            side, usable, game.card_w_mm, game.card_h_mm, (Wimg, Himg),
+            sep_unc_mm=(math.hypot(_ed(p1, ax_p), _ed(p2, ax_p))
+                        if pair_ok else 0.0),
             opp_unc_mm=math.hypot(
                 _ed(opp_side, ax_o),
-                opp.rms / math.sqrt(max(opp.n, 1)) / ppm0))
+                opp.rms / math.sqrt(max(opp.n, 1)) / ppm0),
+            **kw)
         rep = reports[side]
         if inf is None:
-            rep.notes.append(f"tried to work it out from the other three "
+            rep.notes.append(f"tried to work it out from the other "
                              f"edges, but {why}")
             return
         mid_u = 0.5 * sum(inf.line.u_range)
@@ -292,20 +380,23 @@ def analyze_borderless(photo: str | Path, card_id: str, game: GameSpec,
         # 1) re-scan around the constructed position, when it is far
         # enough from the original seed that the first scan missed it
         win = 0.0
-        if seed_dev_mm > 0.5 * seed_slop_mm:
+        if not no_rescan and (force_rescan
+                              or seed_dev_mm > 0.5 * seed_slop_mm):
             tilt_px = abs(inf.line.m) * 0.5 * (inf.line.u_range[1]
                                                - inf.line.u_range[0])
-            win = max(RESCAN_MIN_MM, RESCAN_K * inf.extra_unc_mm) \
-                * inf.ppm + tilt_px
+            win = max(RESCAN_MIN_MM * inf.ppm,
+                      RESCAN_K * inf.extra_unc_mm * inf.ppm + tilt_px,
+                      E.MIN_SCAN_HALF_WINDOW_PX)
             lim = Wimg if side in ("left", "right") else Himg
             win = min(win, v_inf - 1.0, lim - 2.0 - v_inf)
-        if win > 0.5 * inf.ppm:
+        if win >= E.MIN_SCAN_HALF_WINDOW_PX:
             qa2 = []
             line2, rep2, _, meth2, est2 = _measure_side(
                 side, v_inf, win, win, qa2)
-            if line2 is not None and est2 is None:
+            if line2 is not None and est2 is None and rep2.status == "ok":
                 d_mm = abs(float(line2.v_at(mid_u)) - v_inf) / inf.ppm
-                if d_mm <= RESCAN_K * inf.extra_unc_mm:
+                if d_mm <= max(RESCAN_K * inf.extra_unc_mm,
+                               RESCAN_AGREE_MIN_MM):
                     rep2.notes.append(
                         f"found on a second look, {seed_dev_mm:.1f}mm from "
                         "where the card was first placed, by searching "
@@ -327,8 +418,40 @@ def analyze_borderless(photo: str | Path, card_id: str, game: GameSpec,
                     f"a second look found an edge {d_mm:.2f}mm from where "
                     "the other three edges said it must be, which is too "
                     "far to trust")
+            else:
+                rep.notes.append(
+                    "a second look where the other three edges said it "
+                    "must be did not find a clean edge either")
 
-        # 2) fall back to the constructed line itself
+        # 2) the hybrid cut detector, anchored on the construction. On its
+        # own (seed-anchored) it latches onto artwork with clean-looking
+        # fits whose position depends on the window, so it is only trusted
+        # here: close to a prediction, and giving the same answer from two
+        # different windows.
+        cut = _cut_rescue(side, inf)
+        if cut is not None:
+            line_c, extra_c, note_c = cut
+            strict_notes = "; ".join(rep.notes) or "refused"
+            new_rep = EdgeFitReport(
+                edge=side, method="cut-estimate", n_points=line_c.n,
+                n_rejected=line_c.n_rej, rms_residual_px=line_c.rms,
+                angle_deg=line_c.angle_from_nominal_deg(),
+                bow_px=line_c.bow_px, status="estimated",
+                notes=[f"could not be measured properly: {strict_notes}",
+                       note_c])
+            res.edge_fits[res.edge_fits.index(rep)] = new_rep
+            reports[side], lines[side] = new_rep, line_c
+            methods[side] = "cut"
+            est_extra[side] = extra_c
+            qa.append(QAFlag(
+                "EDGE_ESTIMATED",
+                f"The {side} edge was too unclear to measure properly, so "
+                f"it has been estimated instead: {note_c}. The result is "
+                "marked with a squiggle and carries a bigger margin of "
+                "error to match."))
+            return
+
+        # 3) fall back to the constructed line itself
         if seed_dev_mm > INFER_MAX_SEED_DEV_MM:
             rep.notes.append(
                 f"working it out from the other three edges puts it "
@@ -360,10 +483,129 @@ def analyze_borderless(photo: str | Path, card_id: str, game: GameSpec,
                         extra=" In testing this moved results by about "
                               "0.1mm.")
 
+    # --- render match ---
+    render_gray, render_rgb, url, card = render_source.get_render(card_id)
+    Hr, Wr = render_gray.shape
+    pad = int(0.02 * min(Wimg, Himg))
+    mask = np.zeros_like(gray, np.uint8)
+    mask[max(0, y0 - pad):min(Himg, y1 + pad),
+         max(0, x0 - pad):min(Wimg, x1 + pad)] = 255
+    Hpr, n_inl, med_err = match_to_render(gray, render_gray, photo_mask=mask)
+    ppm_r = Wr / game.card_w_mm  # +-2% (render crop inside trim), differential use only
+    res.render = RenderMatchReport(
+        source="lorcanajson/ravensburger", url=url, render_size=(Wr, Hr),
+        n_inliers=n_inl, median_reproj_px=med_err,
+        notes=[f"card: {card.get('fullIdentifier', card_id)}"])
+    if n_inl < 200:
+        qa.append(QAFlag("WEAK_RENDER_MATCH",
+                         f"Only {n_inl} points could be matched between "
+                         "your photo and the official card picture, where "
+                         "a good match finds 600 to 800. The two may not be "
+                         "lined up correctly.", severity="warning"))
+    if med_err > 2.0:
+        qa.append(QAFlag("HIGH_REPROJECTION_ERROR",
+                         "Your photo and the official card picture line up "
+                         f"to about {med_err:.1f} pixels, where 1 pixel is "
+                         "normal. The alignment is loose."))
+
+    # --- leaning-edge check, then the fourth edge ---
+    # Mapped into the official picture, the photo's perspective is undone,
+    # so the four cut edges of a real (rectangular) card must share one
+    # rotation. An edge that leans away from the others was found on
+    # something else - a case edge, a shadow, a glare streak - even when
+    # its readings line up neatly. It is dropped, which lets the
+    # fourth-edge path look for the real one.
+    def _drop(side, note, code, msg):
+        rep = reports[side]
+        new_rep = EdgeFitReport(
+            edge=side, method=rep.method, n_points=rep.n_points,
+            n_rejected=rep.n_rejected, rms_residual_px=rep.rms_residual_px,
+            angle_deg=rep.angle_deg, bow_px=rep.bow_px, status="refused",
+            notes=list(rep.notes) + [note])
+        res.edge_fits[res.edge_fits.index(rep)] = new_rep
+        reports[side], lines[side] = new_rep, None
+        est_extra.pop(side, None)
+        qa.append(QAFlag(code, msg, severity="warning"))
+
+    def _cut_rescue(side, inf):
+        line = inf.line
+        us = np.linspace(line.u_range[0], line.u_range[1], n_scans)
+        mid = float(np.median(us))
+        fits = []
+        for w in CUT_RESCUE_WINDOWS_MM:
+            try:
+                cu, cv, cd = E.cut_scan(gray, side, line.v_at, us, inf.ppm,
+                                        win_out_mm=w, win_in_mm=w,
+                                        plateau_mm=-(w - 0.5))
+            except ValueError:
+                return None
+            if cd.n_ok < max(15, 0.3 * n_scans):
+                return None
+            f = G.FittedLine.fit(line.orientation, cu, cv)
+            if f.rms > CUT_RESCUE_RMS_PX or \
+                    (max(cu) - min(cu)) < 0.3 * (us[-1] - us[0]):
+                return None
+            fits.append(f)
+        pos = [float(f.v_at(mid)) for f in fits]
+        spread_mm = (max(pos) - min(pos)) / inf.ppm
+        if spread_mm > CUT_RESCUE_AGREE_MM:
+            return None
+        d_mm = abs(pos[0] - float(line.v_at(mid))) / inf.ppm
+        if d_mm > RESCAN_K * inf.extra_unc_mm:
+            return None
+        best = fits[0]
+        extra = math.sqrt(BASE_SYSTEMATIC_MM ** 2 + spread_mm ** 2
+                          + (best.rms / math.sqrt(best.n) / inf.ppm) ** 2)
+        if extra >= inf.extra_unc_mm:
+            return None
+        note = (f"read with a second kind of edge detector from "
+                f"{best.n} readings, close to where the other edges said "
+                f"it must be ({d_mm:.2f}mm away) and the same from two "
+                f"different search widths (to {spread_mm:.2f}mm); an extra "
+                f"{extra:.2f}mm has been added to the margin of error")
+        return best, extra, note
+
+    tried_fourth, dropped_leaning, no_rescan = set(), set(), set()
+    for _ in range(4):
+        changed = False
+        if n_inl >= LEAN_MIN_INLIERS:
+            leaning = _lean_check(Hpr, lines, methods)
+            for side, why in leaning.items():
+                if side in tried_fourth:
+                    # it was itself found on a second look: build it
+                    # instead, without looking a third time
+                    tried_fourth.discard(side)
+                    no_rescan.add(side)
+                dropped_leaning.add(side)
+                _drop(side, why, "EDGE_LEANING",
+                      f"The {side} edge that was found {why}. It was not "
+                      "used.")
+                changed = True
+            if leaning:
+                # a constructed edge copied the geometry of a dropped one
+                for side in _SIDES:
+                    if methods.get(side) == "inferred" and \
+                            lines[side] is not None:
+                        qa[:] = [q for q in qa if not (
+                            q.code == "EDGE_INFERRED"
+                            and f"The {side} edge" in q.message)]
+                        methods[side] = "step"
+                        tried_fourth.discard(side)
+                        _drop(side, "withdrawn: it was worked out from an "
+                              "edge that turned out to be wrong",
+                              "EDGE_INFERENCE_WITHDRAWN",
+                              f"The {side} edge had been worked out from "
+                              "the other edges, but one of those turned "
+                              "out to be wrong, so that was withdrawn too.")
+        for side in _SIDES:
+            if lines[side] is None and side not in tried_fourth:
+                tried_fourth.add(side)
+                _fourth_edge(side, force_rescan=side in dropped_leaning,
+                             no_rescan=side in no_rescan)
+                changed = changed or lines[side] is not None
+        if not changed:
+            break
     missing = [s for s in _SIDES if lines[s] is None]
-    if len(missing) == 1:
-        _fourth_edge(missing[0])
-        missing = [s for s in _SIDES if lines[s] is None]
     if missing:
         for ax, (a, b) in {"x": ("left", "right"), "y": ("top", "bottom")}.items():
             bad = [s for s in (a, b) if lines[s] is None]
@@ -448,31 +690,6 @@ def analyze_borderless(photo: str | Path, card_id: str, game: GameSpec,
                      if methods.get(k) != "inferred"},
                     rows, cols, inp.px_per_mm)
 
-    # --- render match ---
-    render_gray, render_rgb, url, card = render_source.get_render(card_id)
-    Hr, Wr = render_gray.shape
-    pad = int(0.02 * min(Wimg, Himg))
-    mask = np.zeros_like(gray, np.uint8)
-    mask[max(0, y0 - pad):min(Himg, y1 + pad),
-         max(0, x0 - pad):min(Wimg, x1 + pad)] = 255
-    Hpr, n_inl, med_err = match_to_render(gray, render_gray, photo_mask=mask)
-    ppm_r = Wr / game.card_w_mm  # +-2% (render crop inside trim), differential use only
-    res.render = RenderMatchReport(
-        source="lorcanajson/ravensburger", url=url, render_size=(Wr, Hr),
-        n_inliers=n_inl, median_reproj_px=med_err,
-        notes=[f"card: {card.get('fullIdentifier', card_id)}"])
-    if n_inl < 200:
-        qa.append(QAFlag("WEAK_RENDER_MATCH",
-                         f"Only {n_inl} points could be matched between "
-                         "your photo and the official card picture, where "
-                         "a good match finds 600 to 800. The two may not be "
-                         "lined up correctly.", severity="warning"))
-    if med_err > 2.0:
-        qa.append(QAFlag("HIGH_REPROJECTION_ERROR",
-                         "Your photo and the official card picture line up "
-                         f"to about {med_err:.1f} pixels, where 1 pixel is "
-                         "normal. The alignment is loose."))
-
     # --- map physical edges into render space ---
     rlines = {}
     for side in _SIDES:
@@ -498,7 +715,9 @@ def analyze_borderless(photo: str | Path, card_id: str, game: GameSpec,
     span_bad = {}
     bounds = getattr(game, "render_span_bounds_mm", None)
     if bounds:
-        span_bad = _render_span_violations(res.per_side_offsets_mm, bounds)
+        span_bad = _render_span_violations(
+            res.per_side_offsets_mm, bounds,
+            {k: 2.0 * v for k, v in est_extra.items()})
         for ax, why in sorted(span_bad.items()):
             qa.append(QAFlag(
                 "RENDER_SPAN_MISMATCH",

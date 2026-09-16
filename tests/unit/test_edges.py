@@ -178,3 +178,11 @@ def test_step_scan_rejects_penumbra_crossings():
     assert diag.reject_reasons.get("shadowed_outside_level", 0) >= 8
     # anything accepted on shadowed rows must still be the true cut
     assert all(abs(x - edge) < 1.0 for x in v)
+
+
+def test_min_scan_window_lets_every_scanner_run():
+    from centering import edges as E
+    # a symmetric window at the minimum half-width is long enough for the
+    # longest-profile scanner
+    assert 2 * E.MIN_SCAN_HALF_WINDOW_PX >= E.MIN_TEXTURE_PROFILE_PX
+    assert E.MIN_TEXTURE_PROFILE_PX >= E.MIN_STEP_PROFILE_PX

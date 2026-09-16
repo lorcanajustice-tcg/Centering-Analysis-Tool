@@ -84,6 +84,7 @@ def test_uncertainty_has_every_term_and_a_floor():
     inf, _ = _infer("top", quad_lines(), sep_unc_mm=0.0, opp_unc_mm=0.0)
     assert set(inf.terms_mm) == {"size", "scale", "tilt", "shape",
                                  "opposite_edge"}
+    assert inf.scale_from == "pair"
     # never better than the manufactured-size spread plus the shape floor
     assert inf.extra_unc_mm >= np.hypot(INF.CUT_SIZE_TOL_MM,
                                         INF.SHAPE_UNC_MM)
@@ -97,7 +98,12 @@ def test_refuses_when_an_input_is_missing():
     three = {k: v for k, v in lines.items() if k not in ("bottom", "left")}
     inf, why = INF.infer_missing_edge("bottom", three, W_MM, H_MM, IMG,
                                       sep_unc_mm=0.1, opp_unc_mm=0.1)
-    assert inf is None and "three" in why
+    assert inf is None and "too few" in why
+    # ...and with no opposite edge at all
+    two = {k: v for k, v in lines.items() if k not in ("bottom", "top")}
+    inf, why = INF.infer_missing_edge("bottom", two, W_MM, H_MM, IMG,
+                                      sep_unc_mm=0.1, opp_unc_mm=0.1)
+    assert inf is None and "opposite" in why
 
 
 def test_refuses_when_construction_leaves_the_photo():
@@ -108,3 +114,87 @@ def test_refuses_when_construction_leaves_the_photo():
         "h", np.linspace(600, 2400, 20), np.full(20, 1500.0))
     inf, why = _infer("top", lines)
     assert inf is None and "outside the photo" in why
+
+
+# --- rectified construction (with the photo -> picture alignment) ------
+
+def _pitched_scene(tilt_deg=12.0, f=3000.0):
+    """A card plane viewed with strong pitch: returns (lines, H) where H
+    maps photo px to a 10 px/mm card-plane frame (origin at the card's
+    top-left). Linear-scale models cannot reproduce this."""
+    import cv2
+    t = np.radians(tilt_deg)
+    R = np.array([[1, 0, 0], [0, np.cos(t), -np.sin(t)],
+                  [0, np.sin(t), np.cos(t)]])
+    K = np.array([[f, 0, 1500], [0, f, 2000], [0, 0, 1]])
+    corners_mm = np.array([[-W_MM / 2, -H_MM / 2], [W_MM / 2, -H_MM / 2],
+                           [W_MM / 2, H_MM / 2], [-W_MM / 2, H_MM / 2]])
+    P = []
+    for x, y in corners_mm:
+        X = R @ np.array([x, y, 0.0]) + np.array([0, 0, 150.0])
+        p = K @ X
+        P.append(p[:2] / p[2])
+    P = np.array(P, np.float32)
+    frame = np.array([[0, 0], [W_MM * 10, 0], [W_MM * 10, H_MM * 10],
+                      [0, H_MM * 10]], np.float32)
+    H = cv2.getPerspectiveTransform(P, frame)
+
+    def line(a, b, orient):
+        t_ = np.linspace(0, 1, 40)[:, None]
+        pts = P[a] + t_ * (P[b] - P[a])
+        if orient == "v":
+            return G.FittedLine.fit("v", pts[:, 1], pts[:, 0])
+        return G.FittedLine.fit("h", pts[:, 0], pts[:, 1])
+    lines = {"top": line(0, 1, "h"), "right": line(1, 2, "v"),
+             "bottom": line(3, 2, "h"), "left": line(0, 3, "v")}
+    return lines, H.astype(np.float64)
+
+
+@pytest.mark.parametrize("side", ["left", "right", "top", "bottom"])
+def test_rectified_is_exact_under_strong_pitch(side):
+    lines, H = _pitched_scene()
+    rect, why = _infer(side, lines, H_photo_to_render=H)
+    assert rect is not None, why
+    u = np.linspace(*rect.line.u_range, 11)
+    assert np.abs(rect.line.v_at(u) - lines[side].v_at(u)).max() < 0.5
+    assert "alignment" in rect.terms_mm and "tilt" not in rect.terms_mm
+
+
+def test_linear_model_misses_pitch_along_the_edge():
+    # the case the rectified path exists for: a left/right edge under
+    # pitch leans, and the linear model copies the opposite edge's lean
+    lines, H = _pitched_scene()
+    lin, _ = _infer("right", lines)
+    rect, _ = _infer("right", lines, H_photo_to_render=H)
+    true_m = lines["right"].m
+    assert abs(rect.line.m - true_m) < 2e-3
+    assert abs(lin.line.m - true_m) > 5 * abs(rect.line.m - true_m)
+
+
+def test_picture_scale_used_without_the_pair():
+    lines, H = _pitched_scene()
+    only = {"top": lines["top"]}          # bottom missing, no left/right
+    inf, why = INF.infer_missing_edge(
+        "bottom", only, W_MM, H_MM, IMG, sep_unc_mm=0.0, opp_unc_mm=0.05,
+        H_photo_to_render=H, frame_ppm=10.0, frame_ppm_rel_unc=0.005)
+    assert inf is not None, why
+    assert inf.scale_from == "picture"
+    assert "official picture" in inf.note
+    assert inf.terms_mm["scale"] == pytest.approx(H_MM * 0.005)
+    u = np.linspace(*inf.line.u_range, 11)
+    assert np.abs(inf.line.v_at(u) - lines["bottom"].v_at(u)).max() < 0.5
+    # a wrong picture scale moves it by exactly that fraction of a card
+    off, _ = INF.infer_missing_edge(
+        "bottom", only, W_MM, H_MM, IMG, sep_unc_mm=0.0, opp_unc_mm=0.05,
+        H_photo_to_render=H, frame_ppm=10.1, frame_ppm_rel_unc=0.005)
+    mid = 0.5 * sum(inf.line.u_range)
+    shift_mm = (off.line.v_at(mid) - inf.line.v_at(mid)) / inf.ppm
+    assert shift_mm == pytest.approx(0.01 * H_MM, rel=0.1)
+
+
+def test_picture_scale_needs_the_alignment():
+    lines, _ = _pitched_scene()
+    inf, why = INF.infer_missing_edge(
+        "bottom", {"top": lines["top"]}, W_MM, H_MM, IMG, sep_unc_mm=0.0,
+        opp_unc_mm=0.05, frame_ppm=10.0)
+    assert inf is None and "too few" in why

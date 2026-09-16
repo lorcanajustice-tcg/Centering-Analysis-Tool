@@ -33,8 +33,8 @@ FLAGS: dict[str, tuple[str, str]] = {
         "found in the wrong place - check the overlay picture."),
     "FRAME_LINE_SPARSE": (
         "The printed gold line was hard to follow",
-        "Use a sharper, larger photo. Until then, treat this border as "
-        "less certain than the plus-or-minus figure suggests."),
+        "Nothing to do - the extra doubt is already in the plus-or-minus "
+        "figure. A sharper photo usually makes the line easier to follow."),
     "PARTIAL_EDGE_SPAN": (
         "Only part of this edge could be measured",
         "Use a plain background with a bit more contrast against the card, "

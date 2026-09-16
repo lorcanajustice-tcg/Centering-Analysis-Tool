@@ -52,6 +52,11 @@ include with a report. You do not have to do anything different for those
 it cannot handle is a card cropped so tightly there is no margin at all,
 because then there is no edge to find. A millimetre of surround is plenty.
 
+Small pictures work as well - a screenshot, or a photo someone sent you
+that got shrunk on the way. Down to about a fifth of normal phone
+resolution the card is still measured, just with a wider margin of error,
+and the result tells you how wide.
+
 ---
 
 ## Reading the answer
@@ -151,15 +156,18 @@ together:
   clearly-labelled method could recover it. Always shown with a ≈ and
   always carrying a bigger margin of error. If that margin grows past
   about the width of a grading band, the answer is refused instead.
-  On a front, if one edge cannot be seen at all, the other three and the
-  card's known size say where it must be. The tool looks for it again
+  On a front, if an edge cannot be seen at all, the opposite edge and
+  the card's known size say where it must be. The tool looks for it again
   there first - a box drawn a little too big is the usual reason it was
-  missed - and only if that fails uses the worked-out position, as an
-  estimate. Either way the other direction is no longer held back by it.
+  missed. If that fails it tries a second kind of edge detector there, and
+  only then uses the worked-out position, as an estimate. Either way the
+  other direction is no longer held back by it.
 - **Not measured** — with the reason, in plain words, and what to try.
 
 It also watches for things that quietly ruin measurements and tells you
-about them: uneven lighting, a shadow along an edge, a bent card, the card
+about them: uneven lighting, a shadow along an edge, an "edge" that is
+really the side of a case (it leans away from the other three once the
+photo's angle is taken out, and is thrown away), a bent card, the card
 sitting too close to the edge of the photo, a poor match against the
 official picture, and the card coming out the wrong shape (usually a
 sleeve, a bend, or an edge found in the wrong place).

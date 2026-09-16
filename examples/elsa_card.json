@@ -1,9 +1,9 @@
 {
-  "schema_version": "1.0",
+  "schema_version": "1.1",
   "kind": "card",
   "game": "lorcana",
   "back": {
-    "schema_version": "1.0",
+    "schema_version": "1.1",
     "kind": "back",
     "game": "lorcana",
     "input": {
@@ -23,7 +23,7 @@
       "focal_mm_equiv": null,
       "corrected": false,
       "notes": [
-        "full rectification unavailable (missing edges); perspective handled by per-row scale; span scale variation 0.06% bounds the residual effect"
+        "not all four edges were found, so tilt could only be partly corrected. The card's width changes by 0.06% across the photo, which is the most this can be affecting the result"
       ]
     },
     "edge_fits": [
@@ -48,7 +48,7 @@
         "bow_px": 0.99,
         "status": "ok",
         "notes": [
-          "partial coverage: 27x insufficient_texture_contrast"
+          "only part of that edge could be read (27 because the background looked too much like the card)"
         ]
       },
       {
@@ -61,7 +61,7 @@
         "bow_px": null,
         "status": "refused",
         "notes": [
-          "inconsistent coarse edge detections (spread 110px); likely glare bands or background texture non-uniformity"
+          "the readings along this edge did not agree with each other - they were spread over 110 pixels, which usually means a band of glare, or a background that changes too much along the edge"
         ]
       },
       {
@@ -74,28 +74,28 @@
         "bow_px": null,
         "status": "refused",
         "notes": [
-          "inconsistent coarse edge detections (spread 48px); likely glare bands or background texture non-uniformity"
+          "the readings along this edge did not agree with each other - they were spread over 48 pixels, which usually means a band of glare, or a background that changes too much along the edge"
         ]
       },
       {
         "edge": "frame_left",
         "method": "frame_peak",
-        "n_points": 42,
-        "n_rejected": 13,
-        "rms_residual_px": 0.68,
-        "angle_deg": 0.296,
-        "bow_px": 0.65,
+        "n_points": 79,
+        "n_rejected": 20,
+        "rms_residual_px": 0.66,
+        "angle_deg": 0.26,
+        "bow_px": 0.9,
         "status": "ok",
         "notes": []
       },
       {
         "edge": "frame_right",
         "method": "frame_peak",
-        "n_points": 42,
-        "n_rejected": 13,
-        "rms_residual_px": 0.81,
-        "angle_deg": 0.098,
-        "bow_px": 0.72,
+        "n_points": 74,
+        "n_rejected": 25,
+        "rms_residual_px": 0.76,
+        "angle_deg": 0.115,
+        "bow_px": 0.67,
         "status": "ok",
         "notes": []
       }
@@ -105,12 +105,16 @@
     "qa": [
       {
         "code": "BACKGROUND_NONUNIFORM",
-        "message": "background brightness varies strongly across the frame ({'top_left': 117, 'top_right': 123, 'bottom_left': 37, 'bottom_right': 57}); texture contrast and edge definition degrade in the bright/shadowed regions",
+        "title": "Uneven lighting",
+        "message": "The background is much brighter in some corners than others (from 37 to 123 on a 0-255 brightness scale). The card's edges are harder to pick out in the brightest and the most shadowed parts.",
+        "advice": "Light the card evenly from all sides. Move the lamp further away, or bounce it off a wall or ceiling, and take the photo again.",
         "severity": "warning"
       },
       {
         "code": "PARTIAL_EDGE_SPAN",
-        "message": "right border measured over only 44% of the scan span (weak background texture elsewhere); value represents that region",
+        "title": "Only part of this edge could be measured",
+        "message": "The right border could only be measured along 44% of its length - the background was too plain to read against anywhere else. The number given describes that part of the border.",
+        "advice": "Use a plain background with a bit more contrast against the card, and light it evenly, so the whole edge stands out.",
         "severity": "warning"
       }
     ],
@@ -118,52 +122,54 @@
     "result": {
       "borders_mm": {
         "left": {
-          "value": 2.574,
+          "value": 2.5771,
           "unit": "mm",
           "status": "measured",
           "uncertainty": {
-            "statistical": 0.0041,
+            "statistical": 0.0038,
             "perspective": 0.0008,
             "edge_definition": 0.0833,
             "total": 0.0834
           }
         },
         "right": {
-          "value": 2.1439,
+          "value": 2.1557,
           "unit": "mm",
           "status": "measured",
           "uncertainty": {
-            "statistical": 0.0047,
+            "statistical": 0.0059,
             "perspective": 0.0007,
             "edge_definition": 0.0833,
-            "total": 0.0834
+            "total": 0.0835
           }
         },
         "top": {
           "value": null,
           "unit": "mm",
           "status": "refused",
-          "refusal_reason": "top card edge unmeasurable: inconsistent coarse edge detections (spread 110px); likely glare bands or background texture non-uniformity"
+          "refusal_reason": "The top edge of the card could not be measured: the readings along this edge did not agree with each other - they were spread over 110 pixels, which usually means a band of glare, or a background that changes too much along the edge.",
+          "refusal_advice": "Re-shoot on plain white paper with soft light from all sides, so that every edge of the card stands out clearly."
         },
         "bottom": {
           "value": null,
           "unit": "mm",
           "status": "refused",
-          "refusal_reason": "bottom card edge unmeasurable: inconsistent coarse edge detections (spread 48px); likely glare bands or background texture non-uniformity"
+          "refusal_reason": "The bottom edge of the card could not be measured: the readings along this edge did not agree with each other - they were spread over 48 pixels, which usually means a band of glare, or a background that changes too much along the edge.",
+          "refusal_advice": "Re-shoot on plain white paper with soft light from all sides, so that every edge of the card stands out clearly."
         }
       },
       "ratio_lr": {
         "axis": "LR",
-        "first_pct": 54.6,
-        "second_pct": 45.4,
-        "display": "55/45",
+        "first_pct": 54.5,
+        "second_pct": 45.5,
+        "display": "54/46",
         "convention": "first=Left share",
         "status": "measured",
         "uncertainty_pts": {
-          "statistical": 0.067,
+          "statistical": 0.0773,
           "perspective": 0.032,
-          "edge_definition": 1.2532,
-          "total": 1.2554
+          "edge_definition": 1.249,
+          "total": 1.2518
         }
       },
       "ratio_tb": {
@@ -173,12 +179,13 @@
         "display": null,
         "convention": "first=Top share",
         "status": "refused",
-        "refusal_reason": "top card edge unmeasurable: inconsistent coarse edge detections (spread 110px); likely glare bands or background texture non-uniformity; bottom card edge unmeasurable: inconsistent coarse edge detections (spread 48px); likely glare bands or background texture non-uniformity"
+        "refusal_reason": "The top and bottom borders could not be measured, and both are needed for this. See below for why.",
+        "refusal_advice": "Re-shoot on plain white paper with soft light from all sides, so that every edge of the card stands out clearly."
       }
     }
   },
   "front": {
-    "schema_version": "1.0",
+    "schema_version": "1.1",
     "kind": "borderless",
     "game": "lorcana",
     "input": {
@@ -255,12 +262,16 @@
     "qa": [
       {
         "code": "BACKGROUND_NONUNIFORM",
-        "message": "background brightness varies strongly across the frame; low-contrast regions are excluded from edge scans",
+        "title": "Uneven lighting",
+        "message": "The background is much brighter in some corners than others (from 15 to 87 on a 0-255 brightness scale). The parts of each edge that fall in the brightest or darkest areas were skipped.",
+        "advice": "Light the card evenly from all sides. Move the lamp further away, or bounce it off a wall or ceiling, and take the photo again.",
         "severity": "warning"
       },
       {
         "code": "RENDER_CROP_BIAS_CORRECTED",
-        "message": "calibrated render-crop bias subtracted from the raw shift (x +0.00mm, y -0.08mm; systematic +-0.10mm retained in the uncertainty)",
+        "title": "A known offset in the official picture was corrected",
+        "message": "The official card picture is cropped very slightly off-centre, by a known amount. That has been taken off the result (+0.00mm across, -0.08mm down), and the 0.10mm of doubt left over is included in the plus-or-minus figure.",
+        "advice": "Nothing to do. This correction is automatic and already included in the result.",
         "severity": "info"
       }
     ],
@@ -268,35 +279,35 @@
     "result": {
       "render": {
         "source": "lorcanajson/ravensburger",
-        "url": "/sessions/rcw-018cyfwwuv7qao2nkhdhxk2v/mnt/centering-analyzer/card_db/images/7-6-C2.jpg",
+        "url": "https://api.lorcana.ravensburger.com/images/en/challenge2/6_108ebdd6233ebdf6601c91552efb74fe8e3f24bc.jpg",
         "render_size": [
           1468,
           2048
         ],
-        "n_inliers": 638,
-        "median_reproj_px": 0.84,
+        "n_inliers": 637,
+        "median_reproj_px": 0.83,
         "notes": [
           "card: 6/C2 \u2022 EN \u2022 7"
         ]
       },
       "shift_mm": {
         "x": {
-          "value": -0.2439,
+          "value": -0.2437,
           "unit": "mm",
           "status": "measured",
           "uncertainty": {
-            "statistical": 0.0043,
+            "statistical": 0.0042,
             "perspective": 0.0065,
             "edge_definition": 0.0638,
             "total": 0.0642
           }
         },
         "y": {
-          "value": 0.2882,
+          "value": 0.2892,
           "unit": "mm",
           "status": "measured",
           "uncertainty": {
-            "statistical": 0.0043,
+            "statistical": 0.0042,
             "perspective": 0.0068,
             "edge_definition": 0.1163,
             "total": 0.1165
@@ -306,13 +317,13 @@
       "shift_convention": "positive x = print displaced toward right card edge; positive y = toward bottom edge",
       "equivalent_ratio_lr": {
         "axis": "LR",
-        "first_pct": 44.8,
-        "second_pct": 55.2,
+        "first_pct": 44.9,
+        "second_pct": 55.1,
         "display": "45/55",
         "convention": "first=Left share",
         "status": "measured",
         "uncertainty_pts": {
-          "statistical": 0.09,
+          "statistical": 0.0896,
           "perspective": 0.1377,
           "edge_definition": 1.3469,
           "total": 1.3569
@@ -326,8 +337,8 @@
         "convention": "first=Top share",
         "status": "measured",
         "uncertainty_pts": {
-          "statistical": 0.1,
-          "perspective": 0.1595,
+          "statistical": 0.0996,
+          "perspective": 0.1596,
           "edge_definition": 2.7279,
           "total": 2.7344
         }
@@ -335,7 +346,7 @@
       "per_side_offsets_mm": {
         "left_outside_render": 0.203,
         "right_outside_render": 0.69,
-        "top_outside_render": 0.989,
+        "top_outside_render": 0.991,
         "bottom_outside_render": 0.573
       },
       "assumption": "official render crop is layout-locked but NOT symmetric about print centre; a calibrated per-axis crop bias is subtracted from the raw shift (see GameSpec.render_crop_bias_mm). per_side_offsets_mm remain raw render-relative values, not absolute borders"
@@ -343,11 +354,11 @@
   },
   "registration_mm": {
     "x": {
-      "value": 0.0289,
+      "value": 0.033,
       "unit": "mm",
       "status": "measured",
       "uncertainty": {
-        "statistical": 0.0053,
+        "statistical": 0.0055,
         "perspective": 0.0065,
         "edge_definition": 0.0868,
         "total": 0.0872
@@ -357,9 +368,9 @@
       "value": null,
       "unit": "mm",
       "status": "refused",
-      "refusal_reason": "back top unavailable (top card edge unmeasurable: inconsistent coarse edge detections (spread 110px); likely glare bands or background texture non-uniformity); back bottom unavailable (bottom card edge unmeasurable: inconsistent coarse edge detections (spread 48px); likely glare bands or background texture non-uniformity)"
+      "refusal_reason": "This cross-check needs the back's top border and the back's bottom border, which could not be measured. See the reasons above."
     }
   },
-  "mirror_consistency": "back L/R 55/45 vs front equivalent 45/55 (mirrored 55.2/44.8): one cut, registration +0.029mm",
+  "mirror_consistency": "The back reads 54/46 left to right. The front works out to 45/55, which is 55.1/44.9 when you flip it over to compare. Both are looking at the same single cut, and they agree to within 0.033mm.",
   "qa": []
 }

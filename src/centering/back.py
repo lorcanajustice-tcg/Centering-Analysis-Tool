@@ -24,6 +24,16 @@ from .fitting import (SHADOW_BAND_MM, _colour_edge,  # noqa: F401
 
 _SIDES = ("left", "right", "top", "bottom")
 
+# Along-side spacing of the frame-line scan lines (see the frame-line
+# section of analyze_back). TAG copy Y / copy T backs, L/R by line count:
+# 55 -> 52.89 / 53.23, 101 -> 51.16 / 52.77, 151 -> 50.98 / 52.59,
+# 201 -> 51.15 / 52.84. 151 lines on those sides is a 0.41mm pitch.
+FRAME_SCAN_PITCH_MM = 0.4
+# the drift check re-traces the line 1.5x coarser (0.6mm on these numbers,
+# still in the settled range) on lines that do not coincide with the main
+# grid; the difference goes into the statistical term
+FRAME_DRIFT_PITCH_RATIO = 1.5
+
 def analyze_back(photo: str | Path, game: GameSpec, out_dir: Optional[str] = None,
                  n_scans: int = 55, make_overlay: bool = True) -> BackResult:
     rgb, gray, inp = load_photo(photo)
@@ -91,6 +101,10 @@ def analyze_back(photo: str | Path, game: GameSpec, out_dir: Optional[str] = Non
             continue
         us = rows if side in ("left", "right") else cols
 
+        def _win(mm):
+            # scanners need a minimum profile length at any resolution
+            return max(mm * ppm0, E.MIN_SCAN_HALF_WINDOW_PX)
+
         slop = coarse[side].slop_mm
         out_mm = slop if slop is not None else 6.0
         in_mm = slop if slop is not None else 3.0
@@ -98,7 +112,7 @@ def analyze_back(photo: str | Path, game: GameSpec, out_dir: Optional[str] = Non
         def _fine(method, side=side, us=us, out_mm=out_mm, in_mm=in_mm):
             fn = E.step_scan if method == "step" else E.texture_scan
             return fn(gray, side, coarse[side].pos, us,
-                      search_out_px=out_mm * ppm0, search_in_px=in_mm * ppm0)
+                      search_out_px=_win(out_mm), search_in_px=_win(in_mm))
 
         # prefer the scanner that established the coarse position; on
         # smooth light backgrounds that is the brightness step. If the
@@ -120,7 +134,7 @@ def analyze_back(photo: str | Path, game: GameSpec, out_dir: Optional[str] = Non
         # cut; brightness does not. Where the colour signal exists and
         # covers the edge, it defines the cut.
         line, rep, diag, method = _colour_edge(
-            chroma, side, coarse[side].pos, us, out_mm * ppm0, in_mm * ppm0,
+            chroma, side, coarse[side].pos, us, _win(out_mm), _win(in_mm),
             (line, rep, diag, method), qa, ppm0)
         methods[side] = method
         if line is not None and line.bow_px and line.bow_px > 3.0:
@@ -205,11 +219,38 @@ def analyze_back(photo: str | Path, game: GameSpec, out_dir: Optional[str] = Non
     flines = {}
     if fspec is None:
         raise ValueError(f"game {game.name} has no back frame spec")
+    # The frame line is sampled on its own, denser grid: a fixed pitch in
+    # mm along the side rather than the cut edges' n_scans. At 55 lines
+    # (1.1mm apart on a long side) the few lines where the halftone dot
+    # chain gives a clean peak bunch up along the side, and the fitted line
+    # sits where that stretch puts it - on the TAG copy Y back, L/R 52.89 at
+    # 55 lines against 51.16 / 50.98 / 51.15 at 101 / 151 / 201. The
+    # answer settles once the pitch is ~0.6mm or finer.
+    frame_grid = {}
+    for side, (grid, dim) in (("left", (rows, game.card_h_mm)),
+                              ("right", (rows, game.card_h_mm)),
+                              ("top", (cols, game.card_w_mm)),
+                              ("bottom", (cols, game.card_w_mm))):
+        span_mm = (grid[-1] - grid[0]) / max(ppm, 1e-9)
+        n_f = max(len(grid), int(math.ceil(span_mm / FRAME_SCAN_PITCH_MM)))
+        frame_grid[side] = np.linspace(grid[0], grid[-1], n_f)
+    flines_alt, res_drift = {}, {}
     for side in _SIDES:
         if lines[side] is None:
             flines[side] = None
             continue
-        us = rows if side in ("left", "right") else cols
+        g = frame_grid[side]
+        # second grid for the drift check: FRAME_DRIFT_PITCH_RATIO times
+        # coarser and offset by half its own step, so no line is shared
+        n_alt = max(8, int(round(len(g) / FRAME_DRIFT_PITCH_RATIO)))
+        step_alt = (g[-1] - g[0]) / n_alt
+        g_alt = g[0] + step_alt * (np.arange(n_alt) + 0.5)
+        au, av, adiag = E.frame_peak_scan(gray, side, lines[side], g_alt, ppm,
+                                          min_peak=fspec.min_peak,
+                                          search_mm=fspec.search_mm)
+        aline, _ = _edge_report(f"frame_{side}", "frame_peak", au, av, adiag)
+        flines_alt[side] = aline
+        us = g
         fu, fv, fdiag = E.frame_peak_scan(gray, side, lines[side], us, ppm,
                                           min_peak=fspec.min_peak,
                                           search_mm=fspec.search_mm)
@@ -219,30 +260,24 @@ def analyze_back(photo: str | Path, game: GameSpec, out_dir: Optional[str] = Non
         if fline is not None and fdiag.n_attempted and \
                 fline.n < 0.5 * fdiag.n_attempted:
             # The printed line is a halftone dot chain crossed by decorative
-            # structure. Where fewer than half the scan lines survive, the
-            # survivors are a POSITIONALLY BIASED subset - the peak finder
-            # keeps the lines where the dot chain happens to present a clean
-            # peak, and those sample particular phases of the halftone - so
-            # the fitted line sits slightly off where a dense sample puts it.
-            #
-            # Measured 2026-08-21 on the TAG scans, and this is a BIAS, not a
-            # variance problem: on copy Y at n_scans=55 the L/R ratio reads
-            # 52.89 against 50.98 at n_scans=151, a 1.9-point move, while the
-            # two halves of that same sparse sample agree with each other to
-            # 5um (0.1 points). A precise, reproducible, wrong answer. No
-            # variance correction can express that - not an effective-n on
-            # the statistical term (which is 0.05pt of a 0.41pt total here),
-            # not a jackknife, not a split-half. The only fixes are to sample
-            # densely enough to converge, or to measure the drift by fitting
-            # at two densities. See TODO.md/DEV-NOTES.md; deliberately not
-            # papered over with an uncertainty term that would be fiction.
+            # structure; where fewer than half the scan lines find it, the
+            # survivors are a POSITIONALLY BIASED subset. Measured
+            # 2026-08-21 on the TAG scans this was a bias, not a variance
+            # problem (two halves of one sparse sample agreed to 5um while
+            # the answer moved 75um/side with the line count), so no
+            # variance correction could express it. Since v0.4.0 the line
+            # is traced on a dense fixed-pitch grid, where the answer has
+            # settled, and the move between that grid and a coarser,
+            # non-overlapping one is carried in the statistical term. The
+            # flag stays because a thin trace is still worth knowing about.
             qa.append(QAFlag(
                 "FRAME_LINE_SPARSE",
                 f"The printed gold line along the {side} could only be "
                 f"traced in {fline.n} of {fdiag.n_attempted} places "
-                f"({fdiag.summary()}). The few spots it was found in are "
-                "not spread evenly along the line, so this border can be "
-                "further out than the plus-or-minus figure suggests.",
+                f"({fdiag.summary()}). Those places are not spread evenly "
+                "along the line, so the line was also traced a second way "
+                "and the difference between the two has been added to the "
+                "plus-or-minus figure.",
                 severity="warning"))
 
     # --- borders ---
@@ -281,23 +316,33 @@ def analyze_back(photo: str | Path, game: GameSpec, out_dir: Optional[str] = Non
                 f"{cov*100:.0f}% of its length - the background was too "
                 "plain to read against anywhere else. The number given "
                 "describes that part of the border."))
-        if Hmm is not None:
-            f_mm = G.transform_points(Hmm, flines[side].points(60))
-            ax = 0 if side in ("left", "right") else 1
-            ref = 0.0 if side in ("left", "top") else (
-                game.card_w_mm if ax == 0 else game.card_h_mm)
-            w = float(abs(np.mean(f_mm[:, ax]) - ref))
-        else:
+        def width_of(fl):
+            if Hmm is not None:
+                f_mm = G.transform_points(Hmm, fl.points(60))
+                ax = 0 if side in ("left", "right") else 1
+                ref = 0.0 if side in ("left", "top") else (
+                    game.card_w_mm if ax == 0 else game.card_h_mm)
+                return float(abs(np.mean(f_mm[:, ax]) - ref))
             sgn = 1.0 if side in ("left", "top") else -1.0
-            gaps = sgn * (flines[side].v_at(us) - lines[side].v_at(us))
+            gaps = sgn * (fl.v_at(us) - lines[side].v_at(us))
             if side in ("left", "right") and ppm_rows is not None:
                 local = np.interp(us, rows, ppm_rows)
             else:
                 local = ppm
-            w = float(np.mean(gaps / local))
+            return float(np.mean(gaps / local))
+
+        w = width_of(flines[side])
         stat_px = border_stat_sigma_px(lines[side].rms, lines[side].n,
                                        flines[side].rms, flines[side].n)
-        unc = Uncertainty(statistical=stat_px / ppm,
+        stat_mm = stat_px / ppm
+        # sampling drift: the same line traced on a second, coarser grid
+        # that shares no scan lines with the first. Whatever the choice of
+        # lines moves the answer by is carried, not hidden.
+        if flines_alt.get(side) is not None:
+            drift = abs(width_of(flines_alt[side]) - w)
+            res_drift[side] = drift
+            stat_mm = math.hypot(stat_mm, drift)
+        unc = Uncertainty(statistical=stat_mm,
                           perspective=w * wvar / 2.0,
                           edge_definition=def_border_mm)
         return Measurement(w, "mm", unc)

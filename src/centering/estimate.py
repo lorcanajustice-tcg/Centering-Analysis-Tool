@@ -35,6 +35,11 @@ CAP_MM = 0.5
 # the hybrid cut cross-check must agree with a candidate within this
 HYBRID_AGREE_MM = 0.30
 MIN_POINTS = 4
+# clusters of detections split where neighbours are further apart than
+# this; the px floor keeps per-line detector jitter (~1px) from splitting
+# one edge in two
+CLUSTER_GAP_MM = 0.15
+CLUSTER_GAP_MIN_PX = 4.0
 FIT_RMS_MAX_PX = 1.5
 MIN_SPAN_FRAC = 0.30
 # floor systematic for any estimate-tier edge (unmodelled contamination)
@@ -72,7 +77,7 @@ def rescue_edge(gray, side, u_det, v_det, us_grid, ppm):
     span_ref = float(us_grid.max() - us_grid.min())
     if span_ref <= 0 or not ppm:
         return None, "the search area was too small to work with"
-    gap_px = max(4.0, 0.15 * ppm)
+    gap_px = max(CLUSTER_GAP_MIN_PX, CLUSTER_GAP_MM * ppm)
     orientation = "v" if side in ("left", "right") else "h"
     cands = []
     for cu, cv in _clusters(u_det, v_det, gap_px):
@@ -106,7 +111,12 @@ def rescue_edge(gray, side, u_det, v_det, us_grid, ppm):
         survivors.sort(key=lambda s: -s[1])
     line, ncl, span, d = survivors[0]
     lever = (line.rms / max(math.sqrt(line.n), 1.0)) / ppm / max(span, 1e-6)
-    extra = math.sqrt(BASE_SYSTEMATIC_MM ** 2 + d ** 2 + lever ** 2)
+    # below ~27 px/mm the 4px floor on the cluster gap is wider than
+    # CLUSTER_GAP_MM: a contaminant closer than that cannot be split off,
+    # and can pull the fit by up to half the gap
+    unresolved = max(0.0, gap_px - CLUSTER_GAP_MM * ppm) / ppm / 2.0
+    extra = math.sqrt(BASE_SYSTEMATIC_MM ** 2 + d ** 2 + lever ** 2
+                      + unresolved ** 2)
     note = (f"estimated from {ncl} of {len(u_det)} readings, covering "
             f"{span:.0%} of the edge; a second check agrees to within "
             f"{abs(d):.2f}mm, and an extra {extra:.2f}mm has been added to "

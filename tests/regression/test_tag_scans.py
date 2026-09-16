@@ -21,13 +21,19 @@ third-party measurement of the same physical cards. Bounds below are the
 deltas actually observed, not a target:
 
     file                 TAG L/R   ours    d      TAG T/B   ours    d
-    T6453597B (back)      55/45    53.3   -1.7     41/59   refused
-    Y3106454B (back)      55/45    52.8   -2.1     49/51    48.9   -0.1
+    T6453597B (back)      55/45    52.6   -2.4     41/59    42.6   +1.6
+    Y3106454B (back)      55/45    51.3   -3.7     49/51    49.1   +0.1
     T6453597F (front)     47/53    49.2   +2.2     44/56    47.0   +3.0
     Y3106454F (front)     47/53    50.0   +3.0     47/53    52.9   +5.9
 
-The bordered-back path tracks TAG closely on T/B and sits ~2 points low on
-L/R on both copies. The borderless front path (render match) is looser -
+The bordered-back path tracks TAG closely on T/B and sits 2-4 points low
+on L/R on both copies. The back rows changed in v0.4.0 (they read
+53.3 / 52.8 before): the gold frame line is now traced on a dense 0.4mm
+grid, where the answer has settled (51.1-51.3 and 52.6-52.7 for any pitch
+from 0.2 to 0.6mm), instead of 55 lines, which gave a reproducible but
+sampling-biased value. The fix moved L/R further from TAG, not closer.
+That gap is open and not understood (TODO item "back L/R vs TAG") - do not
+tune to it. The borderless front path (render match) is looser -
 up to 6 points, ~0.25mm - which is NOT understood: it may be our render
 crop bias, or TAG measuring a full-art face against something other than
 the official render. Treat the front bounds as a tripwire against
@@ -59,7 +65,7 @@ BACKS = ["T6453597B-55L45R41T59B.jpg", "Y3106454B-55L45R49T51B.jpg"]
 FRONTS = ["T6453597F-47L53R44T56B.jpg", "Y3106454F-47L53R47T53B.jpg"]
 
 # observed |delta| vs TAG, plus headroom; see the module docstring
-BACK_TOL_PTS = 3.0
+BACK_TOL_PTS = 4.5
 FRONT_TOL_PTS = 7.0
 
 _have = pytest.mark.skipif(

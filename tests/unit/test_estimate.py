@@ -82,3 +82,17 @@ def test_scattered_detections_refused():
     v = 150.0 + rng.uniform(-30, 30, 16)
     est, why = ET.rescue_edge(g, "left", u, v, US, PPM)
     assert est is None
+
+
+def test_low_resolution_carries_the_unresolved_gap():
+    # same detections, same image: at 10 px/mm the 4px cluster-gap floor
+    # (0.4mm) is wider than 0.15mm, and the estimate must say so
+    g = synth_card(150.0)
+    u, v = det_cluster(150.0)
+    lo, _ = ET.rescue_edge(g, "left", u, v, US, PPM)
+    hi, _ = ET.rescue_edge(g, "left", u, v, US, 40.0)
+    assert lo is not None and hi is not None
+    unresolved = (ET.CLUSTER_GAP_MIN_PX - ET.CLUSTER_GAP_MM * PPM) / PPM / 2
+    assert lo.extra_unc_mm >= unresolved
+    # at 40 px/mm 0.15mm is 6px, past the floor: no such term
+    assert hi.extra_unc_mm < lo.extra_unc_mm

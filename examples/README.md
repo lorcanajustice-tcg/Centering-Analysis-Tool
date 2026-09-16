@@ -9,11 +9,12 @@ Numbers only. The marked-up pictures the program also produces are kept out
 of the repository, because they show card artwork — see the licensing note
 in the main README.
 
-**When it was made:** 2026-08-21, after two changes. Card size was
-corrected to the real manufactured 62.9 × 87.9mm (it had been using the
-2.5 × 3.5 inch nominal size, which made every millimetre figure read about
-1% high), and the colour-based edge detectors landed. Don't compare this
-file side by side with one made before that date.
+**When it was made:** 2026-09-15, with v0.4.0. That release traces the
+back's gold frame line on a denser grid, which moved this card's back L/R
+by a tenth of a point, and the file also picks up the plain-English
+wording from v0.3.1. The card size correction (real manufactured
+62.9 × 87.9mm, 2026-08-21) is in too: don't compare this file side by side
+with one made before that date.
 
 **One thing to know when reading it:** `registration_mm` is how much the
 front and back disagree about where the card was cut. On genuine cards that
