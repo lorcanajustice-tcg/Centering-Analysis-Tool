@@ -37,7 +37,7 @@ from . import geometry as G
 from . import hexfit as HF
 from .fitting import _colour_edge, _edge_report, _prefer_fit, _thin_fit
 from .games.base import GameSpec, HexAnchorSpec
-from .imgio import load_photo
+from .imgio import digital_background, digital_image_reason, load_photo
 from .types import (BorderlessResult, HexAnchorReport, Measurement, QAFlag,
                     Ratio, TiltReport, Uncertainty)
 
@@ -497,6 +497,11 @@ def _edge_qa(img_rgb, img_gray, h):
 
 
 def _corner_refuse(res, reason, advice=RESHOOT_CORNER):
+    digital = next((q for q in res.qa if q.code == "DIGITAL_IMAGE"), None)
+    if digital is not None:
+        reason = f"{digital.message} (The corner check said: {reason})"
+        advice = ("Photograph the printed card itself: a close-up of its "
+                  "top-left corner, flat on plain paper, square on.")
     res.hex_check = HexAnchorReport.refused("corner", reason, advice)
     res.shift_mm = {"x": Measurement.refused("mm", reason, advice),
                     "y": Measurement.refused("mm", reason, advice)}
@@ -539,6 +544,9 @@ def analyze_corner(photo, game: GameSpec, card_id: Optional[str] = None,
                            tilt=TiltReport(corrected=False),
                            method="ink_hexagon")
     qa = res.qa
+    digital = digital_background(rgb)
+    if digital:
+        qa.append(QAFlag("DIGITAL_IMAGE", digital_image_reason(digital)))
     spec = game.hex_anchor
     if spec is None:
         return _corner_refuse(res, "There is no ink-cost hexagon layout on "

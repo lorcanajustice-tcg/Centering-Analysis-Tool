@@ -1,9 +1,9 @@
 {
-  "schema_version": "1.1",
+  "schema_version": "1.2",
   "kind": "card",
   "game": "lorcana",
   "back": {
-    "schema_version": "1.1",
+    "schema_version": "1.2",
     "kind": "back",
     "game": "lorcana",
     "input": {
@@ -185,7 +185,7 @@
     }
   },
   "front": {
-    "schema_version": "1.1",
+    "schema_version": "1.2",
     "kind": "borderless",
     "game": "lorcana",
     "input": {
@@ -277,6 +277,56 @@
     ],
     "overlay": "fixtures/IMG_6341_front_overlay.jpg",
     "result": {
+      "method": "official_picture",
+      "hex_check": {
+        "status": "measured",
+        "mode": "full_card",
+        "layout": "uninkable",
+        "layout_source": "this card's own entry in the survey of every official card picture",
+        "centre_from_left_mm": 6.3312,
+        "centre_from_top_mm": 7.3703,
+        "expected_from_left_mm": 6.5897,
+        "expected_from_top_mm": 7.1341,
+        "hexagon_px_per_mm": {
+          "x": 39.534,
+          "y": 39.612
+        },
+        "size_vs_card_pct": {
+          "x": -0.4,
+          "y": -0.2
+        },
+        "fit_rms_mm": 0.0172,
+        "n_points": 368,
+        "shift_mm": {
+          "x": {
+            "value": -0.2585,
+            "unit": "mm",
+            "status": "measured",
+            "uncertainty": {
+              "statistical": 0.0027,
+              "perspective": 0.0174,
+              "edge_definition": 0.0804,
+              "total": 0.0823
+            }
+          },
+          "y": {
+            "value": 0.2362,
+            "unit": "mm",
+            "status": "measured",
+            "uncertainty": {
+              "statistical": 0.0059,
+              "perspective": 0.0195,
+              "edge_definition": 0.1357,
+              "total": 0.1372
+            }
+          }
+        },
+        "agreement_mm": {
+          "x": -0.0148,
+          "y": -0.053
+        },
+        "notes": []
+      },
       "render": {
         "source": "lorcanajson/ravensburger",
         "url": "https://api.lorcana.ravensburger.com/images/en/challenge2/6_108ebdd6233ebdf6601c91552efb74fe8e3f24bc.jpg",

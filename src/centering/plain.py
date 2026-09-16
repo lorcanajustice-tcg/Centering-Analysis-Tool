@@ -97,6 +97,11 @@ FLAGS: dict[str, tuple[str, str]] = {
         "Nothing to do. It is measured the same way. Just note that if it "
         "was cropped out of a phone photo, the lens bending near the "
         "original photo edge is not corrected for."),
+    "DIGITAL_IMAGE": (
+        "This is a digital picture, not a photo",
+        "Photograph the printed card itself. A digital card picture has no "
+        "real cut edges, and an official one is always cropped the same "
+        "way, so neither can show how a card was cut."),
     "HEX_ANCHOR_USED": (
         "Measured from the ink-cost hexagon",
         "Nothing to do. Naming the card as well adds a second, independent "

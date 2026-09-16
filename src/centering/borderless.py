@@ -26,7 +26,7 @@ from .fitting import (_colour_edge, _edge_report, _frame_proximity_qa,
 from .estimate import BASE_SYSTEMATIC_MM, CAP_MM, rescue_edge
 from .hexanchor import equivalent_ratio, measure_in_card
 from .games.base import GameSpec
-from .imgio import load_photo
+from .imgio import digital_background, digital_image_reason, load_photo
 from .infer import OPPOSITE, infer_missing_edge
 from .locate import background_uniformity, card_component_bbox, coarse_locate
 from .overlay import C_EDGE, C_FRAME, Overlay
@@ -143,8 +143,39 @@ def _render_span_violations(offsets_mm: dict, bounds: dict,
     return out
 
 
-def analyze_borderless(photo: str | Path, card_id: Optional[str],
-                       game: GameSpec,
+DIGITAL_ADVICE = ("Photograph the printed card itself: unsleeved, flat on "
+                  "plain white paper, with soft light from all sides.")
+
+
+def analyze_borderless(photo, card_id, game, *args, **kw) -> BorderlessResult:
+    """Front of a card: see _analyze_borderless. A digital picture (not a
+    photo) that cannot be measured gets that said plainly, instead of the
+    edge finder's guess at what went wrong."""
+    res = _analyze_borderless(photo, card_id, game, *args, **kw)
+    return explain_digital_refusals(res)
+
+
+def explain_digital_refusals(res):
+    """Swap the refusal reasons on a digital picture for the real one."""
+    digital = next((q for q in res.qa if q.code == "DIGITAL_IMAGE"), None)
+    if digital is None:
+        return res
+    for store in (res.shift_mm,):
+        for k, m in store.items():
+            if m.status == "refused":
+                store[k] = Measurement.refused(
+                    m.unit, digital.message + " (The edge finder said: "
+                    + (m.refusal_reason or "no edge") + ")", DIGITAL_ADVICE)
+    for name in ("equivalent_ratio_lr", "equivalent_ratio_tb"):
+        r = getattr(res, name)
+        if r is not None and r.status == "refused":
+            setattr(res, name, Ratio.refused(r.axis, digital.message,
+                                             DIGITAL_ADVICE))
+    return res
+
+
+def _analyze_borderless(photo: str | Path, card_id: Optional[str],
+                        game: GameSpec,
                        render_source=None, out_dir: Optional[str] = None,
                        n_scans: int = 50, make_overlay: bool = True,
                        manual_bbox: Optional[tuple] = None
@@ -154,6 +185,9 @@ def analyze_borderless(photo: str | Path, card_id: Optional[str],
     res = BorderlessResult(kind="borderless", game=game.name, input=inp,
                            tilt=TiltReport())
     qa = res.qa
+    digital = digital_background(rgb)
+    if digital:
+        qa.append(QAFlag("DIGITAL_IMAGE", digital_image_reason(digital)))
 
     if render_source is None and card_id:
         from .games.lorcana import LorcanaRenderSource
@@ -189,7 +223,8 @@ def analyze_borderless(photo: str | Path, card_id: Optional[str],
             bad = [s for s in _SIDES if coarse[s].pos is None]
             if bad:
                 raise RuntimeError(
-                    "The card could not be found in this photo. "
+                    (digital_image_reason(digital) + " " if digital else "")
+                    + "The card could not be found in this photo. "
                     + " ".join(f"On the {s} edge, {coarse[s].reason}."
                                for s in bad)
                     + " Try again on plain white paper with soft, even "
