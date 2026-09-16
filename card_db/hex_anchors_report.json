@@ -1,0 +1,430 @@
+{
+  "render_px_per_mm": {
+    "x": 23.3386,
+    "y": 23.2992
+  },
+  "card_mm": [
+    62.9,
+    87.9
+  ],
+  "families": {
+    "inkable": {
+      "n": 2427,
+      "n_window_search": 16,
+      "cx_px": {
+        "n": 2427,
+        "median": 146.56,
+        "robust_sd": 0.001,
+        "sd": 0.037,
+        "pct_within_0p5px": 99.96
+      },
+      "cy_px": {
+        "n": 2427,
+        "median": 156.788,
+        "robust_sd": 0.006,
+        "sd": 0.036,
+        "pct_within_0p5px": 99.96
+      },
+      "apothem_inner_px": {
+        "n": 2427,
+        "median": 57.736,
+        "robust_sd": 0.006,
+        "sd": 0.218,
+        "pct_within_0p5px": 86.4
+      },
+      "apothem_second_px": {
+        "n": 2427,
+        "median": 66.617,
+        "robust_sd": 0.004,
+        "sd": 0.175,
+        "pct_within_0p5px": 98.89
+      },
+      "centre_from_left_mm": 6.2797,
+      "centre_from_top_mm": 6.7293,
+      "centre_from_card_centre_mm": [
+        -25.1703,
+        -37.2207
+      ],
+      "inner_flat_to_flat_mm": 4.9477,
+      "cards_off_by_gt_1px": [
+        "9-205"
+      ],
+      "by_bordered_rarity": {
+        "False|Enchanted": {
+          "n": 141,
+          "cx": 146.56,
+          "cy": 156.726
+        },
+        "False|Epic": {
+          "n": 66,
+          "cx": 146.56,
+          "cy": 156.725
+        },
+        "False|Iconic": {
+          "n": 4,
+          "cx": 146.505,
+          "cy": 156.415
+        },
+        "False|Special": {
+          "n": 55,
+          "cx": 146.526,
+          "cy": 156.772
+        },
+        "True|Common": {
+          "n": 858,
+          "cx": 146.56,
+          "cy": 156.788
+        },
+        "True|Enchanted": {
+          "n": 12,
+          "cx": 146.56,
+          "cy": 156.724
+        },
+        "True|Epic": {
+          "n": 8,
+          "cx": 146.56,
+          "cy": 156.725
+        },
+        "True|Legendary": {
+          "n": 103,
+          "cx": 146.56,
+          "cy": 156.788
+        },
+        "True|Rare": {
+          "n": 379,
+          "cx": 146.56,
+          "cy": 156.788
+        },
+        "True|Special": {
+          "n": 97,
+          "cx": 146.563,
+          "cy": 156.783
+        },
+        "True|Super Rare": {
+          "n": 149,
+          "cx": 146.56,
+          "cy": 156.788
+        },
+        "True|Uncommon": {
+          "n": 555,
+          "cx": 146.56,
+          "cy": 156.788
+        }
+      }
+    },
+    "uninkable": {
+      "n": 576,
+      "n_window_search": 2,
+      "cx_px": {
+        "n": 576,
+        "median": 146.302,
+        "robust_sd": 0.001,
+        "sd": 0.158,
+        "pct_within_0p5px": 99.65
+      },
+      "cy_px": {
+        "n": 576,
+        "median": 155.565,
+        "robust_sd": 0.001,
+        "sd": 0.033,
+        "pct_within_0p5px": 100.0
+      },
+      "apothem_inner_px": {
+        "n": 576,
+        "median": 67.722,
+        "robust_sd": 0.001,
+        "sd": 0.165,
+        "pct_within_0p5px": 99.48
+      },
+      "apothem_second_px": {
+        "n": 576,
+        "median": 78.564,
+        "robust_sd": 0.001,
+        "sd": 0.247,
+        "pct_within_0p5px": 79.51
+      },
+      "centre_from_left_mm": 6.2687,
+      "centre_from_top_mm": 6.6768,
+      "centre_from_card_centre_mm": [
+        -25.1813,
+        -37.2732
+      ],
+      "inner_flat_to_flat_mm": 5.8034,
+      "cards_off_by_gt_1px": [
+        "12-242",
+        "5-223"
+      ],
+      "by_bordered_rarity": {
+        "False|Enchanted": {
+          "n": 49,
+          "cx": 146.31,
+          "cy": 155.563
+        },
+        "False|Epic": {
+          "n": 13,
+          "cx": 146.305,
+          "cy": 155.56
+        },
+        "False|Iconic": {
+          "n": 3,
+          "cx": 146.217,
+          "cy": 155.305
+        },
+        "False|Special": {
+          "n": 22,
+          "cx": 146.302,
+          "cy": 155.562
+        },
+        "True|Common": {
+          "n": 64,
+          "cx": 146.302,
+          "cy": 155.565
+        },
+        "True|Enchanted": {
+          "n": 5,
+          "cx": 146.3,
+          "cy": 155.565
+        },
+        "True|Epic": {
+          "n": 3,
+          "cx": 146.175,
+          "cy": 155.656
+        },
+        "True|Legendary": {
+          "n": 43,
+          "cx": 146.302,
+          "cy": 155.565
+        },
+        "True|Rare": {
+          "n": 186,
+          "cx": 146.302,
+          "cy": 155.565
+        },
+        "True|Special": {
+          "n": 16,
+          "cx": 146.3,
+          "cy": 155.565
+        },
+        "True|Super Rare": {
+          "n": 64,
+          "cx": 146.302,
+          "cy": 155.565
+        },
+        "True|Uncommon": {
+          "n": 108,
+          "cx": 146.302,
+          "cy": 155.565
+        }
+      }
+    },
+    "uninkable_sets1to3": {
+      "n": 179,
+      "n_window_search": 0,
+      "cx_px": {
+        "n": 179,
+        "median": 149.598,
+        "robust_sd": 0.001,
+        "sd": 0.486,
+        "pct_within_0p5px": 97.77
+      },
+      "cy_px": {
+        "n": 179,
+        "median": 155.567,
+        "robust_sd": 0.002,
+        "sd": 0.034,
+        "pct_within_0p5px": 100.0
+      },
+      "apothem_inner_px": {
+        "n": 179,
+        "median": 67.61,
+        "robust_sd": 0.001,
+        "sd": 0.048,
+        "pct_within_0p5px": 100.0
+      },
+      "apothem_second_px": {
+        "n": 179,
+        "median": 78.521,
+        "robust_sd": 0.001,
+        "sd": 0.095,
+        "pct_within_0p5px": 98.32
+      },
+      "centre_from_left_mm": 6.4099,
+      "centre_from_top_mm": 6.6769,
+      "centre_from_card_centre_mm": [
+        -25.0401,
+        -37.2731
+      ],
+      "inner_flat_to_flat_mm": 5.7938,
+      "cards_off_by_gt_1px": [
+        "1-1-C1",
+        "1-10-C1",
+        "1-8-C1",
+        "1-9-C2"
+      ],
+      "by_bordered_rarity": {
+        "False|Enchanted": {
+          "n": 14,
+          "cx": 149.547,
+          "cy": 155.449
+        },
+        "False|Special": {
+          "n": 5,
+          "cx": 146.302,
+          "cy": 155.562
+        },
+        "True|Common": {
+          "n": 18,
+          "cx": 149.598,
+          "cy": 155.567
+        },
+        "True|Enchanted": {
+          "n": 1,
+          "cx": 149.547,
+          "cy": 155.45
+        },
+        "True|Legendary": {
+          "n": 14,
+          "cx": 149.599,
+          "cy": 155.567
+        },
+        "True|Rare": {
+          "n": 64,
+          "cx": 149.599,
+          "cy": 155.567
+        },
+        "True|Special": {
+          "n": 5,
+          "cx": 149.615,
+          "cy": 155.589
+        },
+        "True|Super Rare": {
+          "n": 21,
+          "cx": 149.598,
+          "cy": 155.567
+        },
+        "True|Uncommon": {
+          "n": 37,
+          "cx": 149.599,
+          "cy": 155.567
+        }
+      }
+    },
+    "inkable_Q2promo": {
+      "n": 35,
+      "n_window_search": 0,
+      "cx_px": {
+        "n": 35,
+        "median": 149.526,
+        "robust_sd": 0.0,
+        "sd": 1.422,
+        "pct_within_0p5px": 68.57
+      },
+      "cy_px": {
+        "n": 35,
+        "median": 156.792,
+        "robust_sd": 0.0,
+        "sd": 0.053,
+        "pct_within_0p5px": 100.0
+      },
+      "apothem_inner_px": {
+        "n": 35,
+        "median": 57.734,
+        "robust_sd": 0.0,
+        "sd": 0.007,
+        "pct_within_0p5px": 100.0
+      },
+      "apothem_second_px": {
+        "n": 35,
+        "median": 66.606,
+        "robust_sd": 0.0,
+        "sd": 0.02,
+        "pct_within_0p5px": 100.0
+      },
+      "centre_from_left_mm": 6.4068,
+      "centre_from_top_mm": 6.7295,
+      "centre_from_card_centre_mm": [
+        -25.0432,
+        -37.2205
+      ],
+      "inner_flat_to_flat_mm": 4.9475,
+      "cards_off_by_gt_1px": [
+        "Q2-25",
+        "Q2-26",
+        "Q2-27",
+        "Q2-28",
+        "Q2-29",
+        "Q2-30",
+        "Q2-31",
+        "Q2-32",
+        "Q2-33",
+        "Q2-34",
+        "Q2-35"
+      ],
+      "by_bordered_rarity": {
+        "True|Special": {
+          "n": 35,
+          "cx": 149.526,
+          "cy": 156.792
+        }
+      }
+    },
+    "uninkable_large": {
+      "n": 6,
+      "n_window_search": 4,
+      "cx_px": {
+        "n": 6,
+        "median": 146.334,
+        "robust_sd": 0.017,
+        "sd": 0.029,
+        "pct_within_0p5px": 100.0
+      },
+      "cy_px": {
+        "n": 6,
+        "median": 155.545,
+        "robust_sd": 0.003,
+        "sd": 0.007,
+        "pct_within_0p5px": 100.0
+      },
+      "apothem_inner_px": {
+        "n": 6,
+        "median": 75.689,
+        "robust_sd": 0.005,
+        "sd": 0.03,
+        "pct_within_0p5px": 100.0
+      },
+      "apothem_second_px": {
+        "n": 6,
+        "median": 87.678,
+        "robust_sd": 0.011,
+        "sd": 0.009,
+        "pct_within_0p5px": 100.0
+      },
+      "centre_from_left_mm": 6.2701,
+      "centre_from_top_mm": 6.676,
+      "centre_from_card_centre_mm": [
+        -25.1799,
+        -37.274
+      ],
+      "inner_flat_to_flat_mm": 6.4861,
+      "cards_off_by_gt_1px": [],
+      "by_bordered_rarity": {
+        "True|Super Rare": {
+          "n": 4,
+          "cx": 146.334,
+          "cy": 155.545
+        },
+        "True|Uncommon": {
+          "n": 2,
+          "cx": 146.339,
+          "cy": 155.549
+        }
+      }
+    }
+  },
+  "unmatched": [
+    "11-241",
+    "11-242",
+    "13-244"
+  ],
+  "notes": "Render geometry only: this shows the hexagon is a fixed DIGITAL layout constant per family. Mapping render px to a physical cut carries the render_crop_bias_mm uncertainty (see calibration/NOTES.md). Physical print registration of the hexagon still needs checking on real scans."
+}
