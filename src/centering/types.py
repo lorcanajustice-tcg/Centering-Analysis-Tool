@@ -9,7 +9,10 @@ from .plain import advice_for, title_for
 
 # 1.1 (v0.3.1): added qa[].title, qa[].advice and refusal_advice. Purely
 # additive - every 1.0 field is still present and unchanged.
-SCHEMA_VERSION = "1.1"
+# 1.2: front results gained result.method and result.hex_check (the
+# ink-cost hexagon check), and kind "corner" (a close-up of the top-left
+# corner). Additive again.
+SCHEMA_VERSION = "1.2"
 
 
 def _r(x: Optional[float], nd: int = 4) -> Optional[float]:
@@ -210,6 +213,67 @@ class RenderMatchReport:
 
 
 @dataclass
+class HexAnchorReport:
+    """The ink-cost hexagon check: where the printed hexagon sits against
+    the top and left cut edges, and the print shift that implies."""
+    status: str = "measured"                # measured | refused
+    mode: str = "full_card"                 # full_card | corner
+    layout: Optional[str] = None            # inkable | uninkable | ...
+    layout_source: Optional[str] = None     # plain words
+    centre_from_left_mm: Optional[float] = None
+    centre_from_top_mm: Optional[float] = None
+    expected_from_left_mm: Optional[float] = None   # on a centred card
+    expected_from_top_mm: Optional[float] = None
+    hexagon_px_per_mm: Optional[dict] = None        # scale read off the hexagon
+    # full_card: hexagon size against the card's, per axis, percent
+    size_vs_card_pct: Optional[dict] = None
+    fit_rms_mm: Optional[float] = None
+    n_points: int = 0
+    shift_mm: dict = field(default_factory=dict)    # x, y -> Measurement
+    # full_card only: this check minus the official-picture result
+    agreement_mm: Optional[dict] = None
+    notes: list[str] = field(default_factory=list)
+    refusal_reason: Optional[str] = None
+    refusal_advice: Optional[str] = None
+
+    @classmethod
+    def refused(cls, mode: str, reason: str,
+                advice: Optional[str] = None) -> "HexAnchorReport":
+        return cls(status="refused", mode=mode, refusal_reason=reason,
+                   refusal_advice=advice)
+
+    def to_dict(self) -> dict:
+        d: dict[str, Any] = {"status": self.status, "mode": self.mode}
+        if self.status != "refused":
+            d.update({
+                "layout": self.layout,
+                "layout_source": self.layout_source,
+                "centre_from_left_mm": _r(self.centre_from_left_mm),
+                "centre_from_top_mm": _r(self.centre_from_top_mm),
+                "expected_from_left_mm": _r(self.expected_from_left_mm),
+                "expected_from_top_mm": _r(self.expected_from_top_mm),
+                "hexagon_px_per_mm": (
+                    {k: _r(v, 3) for k, v in self.hexagon_px_per_mm.items()}
+                    if self.hexagon_px_per_mm else None),
+                "size_vs_card_pct": (
+                    {k: _r(v, 2) for k, v in self.size_vs_card_pct.items()}
+                    if self.size_vs_card_pct else None),
+                "fit_rms_mm": _r(self.fit_rms_mm),
+                "n_points": self.n_points,
+                "shift_mm": {k: m.to_dict() for k, m in self.shift_mm.items()},
+                "agreement_mm": (
+                    {k: _r(v) for k, v in self.agreement_mm.items()}
+                    if self.agreement_mm else None),
+            })
+        d["notes"] = list(self.notes)
+        if self.refusal_reason:
+            d["refusal_reason"] = self.refusal_reason
+        if self.refusal_advice:
+            d["refusal_advice"] = self.refusal_advice
+        return d
+
+
+@dataclass
 class FaceResult:
     """Common envelope for one analyzed face."""
     kind: str                       # "back" | "borderless"
@@ -265,10 +329,32 @@ class BorderlessResult(FaceResult):
     equivalent_ratio_lr: Ratio = None
     equivalent_ratio_tb: Ratio = None
     per_side_offsets_mm: Optional[dict] = None      # relative only; render-crop caveat
+    # "official_picture": shift from matching the official card picture;
+    # "ink_hexagon": shift from the printed ink-cost hexagon (card unknown,
+    # or a corner close-up)
+    method: str = "official_picture"
+    hex_check: Optional[HexAnchorReport] = None
 
     def to_dict(self) -> dict:
         d = self._base_dict()
+        if self.method == "ink_hexagon":
+            assumption = (
+                "the print shift comes from where the ink-cost hexagon sits "
+                "against the top and left cut edges, compared with where it "
+                "sits on a perfectly centred card (from the survey of every "
+                "official card picture). The right and bottom edges are "
+                "not used for the shift")
+        else:
+            assumption = (
+                "official render crop is layout-locked but NOT "
+                "symmetric about print centre; a calibrated "
+                "per-axis crop bias is subtracted from the raw "
+                "shift (see GameSpec.render_crop_bias_mm). "
+                "per_side_offsets_mm remain raw render-relative "
+                "values, not absolute borders")
         d["result"] = {
+            "method": self.method,
+            "hex_check": self.hex_check.to_dict() if self.hex_check else None,
             "render": self.render.to_dict() if self.render else None,
             "shift_mm": {k: m.to_dict() for k, m in self.shift_mm.items()},
             "shift_convention": self.shift_convention,
@@ -277,12 +363,7 @@ class BorderlessResult(FaceResult):
             "equivalent_ratio_tb": (self.equivalent_ratio_tb.to_dict()
                                     if self.equivalent_ratio_tb else None),
             "per_side_offsets_mm": self.per_side_offsets_mm,
-            "assumption": ("official render crop is layout-locked but NOT "
-                           "symmetric about print centre; a calibrated "
-                           "per-axis crop bias is subtracted from the raw "
-                           "shift (see GameSpec.render_crop_bias_mm). "
-                           "per_side_offsets_mm remain raw render-relative "
-                           "values, not absolute borders"),
+            "assumption": assumption,
         }
         return d
 

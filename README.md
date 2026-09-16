@@ -93,6 +93,23 @@ picture of that card, lines your photo up against it, and reports how far
 the printing sits off centre — then converts that into the same `55/45`
 style so you can compare.
 
+**Without the card's name**, or from a **close-up of the top-left
+corner**, the front is measured from the ink-cost hexagon instead. Every
+card prints that hexagon in exactly the same place (checked on all 3,226
+official card pictures), so where it sits against the top and left edges
+says how far the printing is off centre. With the card named, this runs as
+a second, independent check and warns you if the two disagree. On the test
+photos the two agree to about 0.03mm left-to-right and 0.09mm top-to-bottom.
+
+A corner close-up needs the whole hexagon, a strip of background beyond
+the top and left edges, and a square-on shot: there are no other edges to
+correct a tilt, so its margin of error is a little bigger. The hexagon's
+known printed size is the ruler.
+
+If the card is not named, it is assumed to be from set 4 or later. Uninkable
+cards from sets 1 to 3 print the hexagon 0.14mm further right; the result
+says so when that could matter.
+
 If you check both sides at once, it also compares them. They are looking
 at the same single cut from opposite sides, so they should agree. A small
 disagreement is normal, though: the two faces are printed in separate
@@ -126,6 +143,8 @@ Running:
 
     centering back  photo.heic                                # back of a card
     centering front photo.heic --card 8-210                   # front of a card
+    centering front photo.heic                                # front, card not named
+    centering corner closeup.jpg                              # top-left corner close-up
     centering card --back b.heic --front f.heic --card 8-210  # both, compared
 
 Useful extras: `--out <folder>` to choose where the marked-up pictures go,
@@ -138,7 +157,8 @@ work.
 
 Using it from your own Python code:
 
-    from centering import analyze_back, analyze_borderless, analyze_card
+    from centering import (analyze_back, analyze_borderless, analyze_card,
+                           analyze_corner)
     r = analyze_back("back.heic", LORCANA)
     r.ratio_lr.display        # "55/45"
     r.borders_mm["left"]      # value, margin of error, and how sure it is

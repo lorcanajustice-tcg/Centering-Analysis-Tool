@@ -77,17 +77,23 @@
       <label><input type="radio" name="mode" value="card" checked><span>Front and back</span></label>
       <label><input type="radio" name="mode" value="back"><span>Back only</span></label>
       <label><input type="radio" name="mode" value="front"><span>Front only</span></label>
+      <label><input type="radio" name="mode" value="corner"><span>Front, corner close-up</span></label>
     </div>
 
     <div class="grid">
       <div id="frontBox">
-        <strong>Photo of the front</strong>
+        <strong id="frontTitle">Photo of the front</strong>
+        <div class="hint" id="cornerHint" style="display:none">A close-up of
+          the top-left corner: the whole ink-cost hexagon, with a strip of
+          background showing beyond the top and left edges. Keep it square
+          on &mdash; there are no other edges to correct a tilt.</div>
         <div class="drop" id="dropFront"><span class="hint">Click here, or drag a photo in<br>(HEIC, JPG or PNG)</span></div>
         <div style="margin-top:10px">
           <strong>Which card is it?</strong>
           <div class="hint">Filled in for you from the photo. You can correct
             it. Type the set and number like 8-210, or part of the card's
-            name.</div>
+            name. If you leave it empty, the front is measured from the
+            ink-cost hexagon in the top-left corner instead.</div>
           <input type="text" id="cardId" placeholder="8-210">
           <div id="detect" class="hint" style="margin-top:6px"></div>
         </div>
@@ -179,7 +185,7 @@ function setFile(role, file) {
     el.appendChild(img);
     el.appendChild(Object.assign(document.createElement('div'), {textContent: file.name, className: 'hint'}));
   }
-  if (role === 'front' && mode() !== 'back') {
+  if (role === 'front' && mode() !== 'back' && mode() !== 'corner') {
     cardIdTouched = false;      // new card: any earlier id no longer applies
     detectCard(file);
   }
@@ -189,8 +195,11 @@ function setFile(role, file) {
 function mode() { return document.querySelector('input[name=mode]:checked').value; }
 function syncBoxes() {
   const m = mode();
-  $('backBox').style.display  = (m === 'front') ? 'none' : '';
+  $('backBox').style.display  = (m === 'front' || m === 'corner') ? 'none' : '';
   $('frontBox').style.display = (m === 'back')  ? 'none' : '';
+  $('cornerHint').style.display = (m === 'corner') ? '' : 'none';
+  $('frontTitle').textContent = (m === 'corner')
+    ? 'Close-up of the top-left corner of the front' : 'Photo of the front';
 }
 $('modes').addEventListener('change', syncBoxes);
 syncBoxes();
@@ -335,7 +344,24 @@ function faceFront(d) {
       <p class="sub">${u}${est(m) ? ' · estimated, not a clean measurement' : ''}</p>`;
   }
 
-  return `<div class="panel"><h2>Front of the card</h2>
+  const hx = res.hex_check;
+  const fmt = v => Number(v).toFixed(2);
+  let hexLine = '';
+  if (hx && hx.status === 'measured' && res.method === 'ink_hexagon') {
+    hexLine = `<p>Measured from where the ink-cost hexagon sits: ${fmt(hx.centre_from_left_mm)}mm
+      from the left edge and ${fmt(hx.centre_from_top_mm)}mm from the top. On a
+      perfectly centred ${hx.layout} card it sits at ${fmt(hx.expected_from_left_mm)}mm and
+      ${fmt(hx.expected_from_top_mm)}mm. (Used: ${hx.layout_source}.)</p>`;
+  } else if (hx && hx.status === 'measured' && hx.agreement_mm) {
+    const parts = Object.entries(hx.agreement_mm).map(([k, v]) =>
+      fmt(Math.abs(v)) + 'mm ' + (k === 'x' ? 'across' : 'down'));
+    hexLine = `<p>A second, independent check from where the ink-cost hexagon
+      sits agrees to within ${parts.join(' and ')}.</p>`;
+  } else if (hx && hx.status === 'refused') {
+    hexLine = `<p>The ink-cost hexagon check did not run: ${hx.refusal_reason}.</p>`;
+  }
+  const title = d.kind === 'corner' ? 'Front of the card (corner close-up)' : 'Front of the card';
+  return `<div class="panel"><h2>${title}</h2>
     <p class="sub">The artwork runs to the edge, so instead of borders this
       measures how far the printing sits off centre on the card.</p>
     ${shiftLine(res.shift_mm.x, 'to the right', 'to the left')}
@@ -348,6 +374,7 @@ function faceFront(d) {
         + res.render.n_inliers + ' matching points, lining up to '
         + Number(res.render.median_reproj_px).toFixed(1) + ' pixels. '
         + ((res.render.notes||[]).join('; ')) : ''}</p>
+      ${hexLine}
       <p>The official picture is cropped very slightly off-centre by a known
         amount, which is corrected for automatically. Because of that, this
         measures how far the printing is off centre, rather than the exact
@@ -408,14 +435,12 @@ $('go').addEventListener('click', async () => {
   const payload = { mode: m, card_id: $('cardId').value, photos: {} };
   if (state.manualBbox && m !== 'back') payload.manual_bbox = state.manualBbox;
   try {
-    if (m !== 'front') {
+    if (m !== 'front' && m !== 'corner') {
       if (!state.back) throw new Error('Add a photo of the back of the card first.');
       payload.photos.back = { name: state.back.name, data: await b64(state.back) };
     }
     if (m !== 'back') {
       if (!state.front) throw new Error('Add a photo of the front of the card first.');
-      if (!$('cardId').value.trim()) throw new Error(
-        'Say which card this is (for example 8-210) so the official picture can be looked up.');
       payload.photos.front = { name: state.front.name, data: await b64(state.front) };
     }
   } catch (e) { $('err').textContent = e.message; return; }

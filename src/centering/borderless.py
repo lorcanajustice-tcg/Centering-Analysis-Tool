@@ -24,6 +24,7 @@ from . import geometry as G
 from .fitting import (_colour_edge, _edge_report, _frame_proximity_qa,
                       _prefer_fit, _shadow_band_qa, _thin_fit)
 from .estimate import BASE_SYSTEMATIC_MM, CAP_MM, rescue_edge
+from .hexanchor import equivalent_ratio, measure_in_card
 from .games.base import GameSpec
 from .imgio import load_photo
 from .infer import OPPOSITE, infer_missing_edge
@@ -142,7 +143,8 @@ def _render_span_violations(offsets_mm: dict, bounds: dict,
     return out
 
 
-def analyze_borderless(photo: str | Path, card_id: str, game: GameSpec,
+def analyze_borderless(photo: str | Path, card_id: Optional[str],
+                       game: GameSpec,
                        render_source=None, out_dir: Optional[str] = None,
                        n_scans: int = 50, make_overlay: bool = True,
                        manual_bbox: Optional[tuple] = None
@@ -153,7 +155,7 @@ def analyze_borderless(photo: str | Path, card_id: str, game: GameSpec,
                            tilt=TiltReport())
     qa = res.qa
 
-    if render_source is None:
+    if render_source is None and card_id:
         from .games.lorcana import LorcanaRenderSource
         render_source = LorcanaRenderSource()
 
@@ -483,26 +485,32 @@ def analyze_borderless(photo: str | Path, card_id: str, game: GameSpec,
                         extra=" In testing this moved results by about "
                               "0.1mm.")
 
-    # --- render match ---
-    render_gray, render_rgb, url, card = render_source.get_render(card_id)
-    Hr, Wr = render_gray.shape
-    pad = int(0.02 * min(Wimg, Himg))
-    mask = np.zeros_like(gray, np.uint8)
-    mask[max(0, y0 - pad):min(Himg, y1 + pad),
-         max(0, x0 - pad):min(Wimg, x1 + pad)] = 255
-    Hpr, n_inl, med_err = match_to_render(gray, render_gray, photo_mask=mask)
-    ppm_r = Wr / game.card_w_mm  # +-2% (render crop inside trim), differential use only
-    res.render = RenderMatchReport(
-        source="lorcanajson/ravensburger", url=url, render_size=(Wr, Hr),
-        n_inliers=n_inl, median_reproj_px=med_err,
-        notes=[f"card: {card.get('fullIdentifier', card_id)}"])
-    if n_inl < 200:
+    # --- render match (only when the card is known) ---
+    card, Hpr, n_inl, med_err = None, None, 0, 0.0
+    Hr = Wr = ppm_r = None
+    if card_id:
+        render_gray, render_rgb, url, card = render_source.get_render(card_id)
+        Hr, Wr = render_gray.shape
+        pad = int(0.02 * min(Wimg, Himg))
+        mask = np.zeros_like(gray, np.uint8)
+        mask[max(0, y0 - pad):min(Himg, y1 + pad),
+             max(0, x0 - pad):min(Wimg, x1 + pad)] = 255
+        Hpr, n_inl, med_err = match_to_render(gray, render_gray,
+                                              photo_mask=mask)
+        ppm_r = Wr / game.card_w_mm  # +-2% (render crop inside trim), differential use only
+        res.render = RenderMatchReport(
+            source="lorcanajson/ravensburger", url=url, render_size=(Wr, Hr),
+            n_inliers=n_inl, median_reproj_px=med_err,
+            notes=[f"card: {card.get('fullIdentifier', card_id)}"])
+    else:
+        res.method = "ink_hexagon"
+    if card_id and n_inl < 200:
         qa.append(QAFlag("WEAK_RENDER_MATCH",
                          f"Only {n_inl} points could be matched between "
                          "your photo and the official card picture, where "
                          "a good match finds 600 to 800. The two may not be "
                          "lined up correctly.", severity="warning"))
-    if med_err > 2.0:
+    if card_id and med_err > 2.0:
         qa.append(QAFlag("HIGH_REPROJECTION_ERROR",
                          "Your photo and the official card picture line up "
                          f"to about {med_err:.1f} pixels, where 1 pixel is "
@@ -690,6 +698,40 @@ def analyze_borderless(photo: str | Path, card_id: str, game: GameSpec,
                      if methods.get(k) != "inferred"},
                     rows, cols, inp.px_per_mm)
 
+    # --- the ink-cost hexagon: the result when the card is not known, a
+    # cross-check when it is ---
+    db_dir = getattr(render_source, "local_db_dir", None)
+    if db_dir is None:
+        from .games.lorcana import _default_local_db_dir
+        db_dir = _default_local_db_dir()
+    hexrep = measure_in_card(rgb, quad, game, inp.px_per_mm, lines, methods,
+                             est_extra, card=card, db_dir=db_dir)
+    res.hex_check = hexrep
+    if hexrep.status == "measured":
+        tol = 100 * game.hex_anchor.scale_tol
+        for ax, name in (("x", "across"), ("y", "down")):
+            dev = hexrep.size_vs_card_pct[ax]
+            if abs(dev) <= tol:
+                continue
+            qa.append(QAFlag(
+                "HEX_SCALE_MISMATCH",
+                f"Measured {name}, the ink-cost hexagon is {dev:+.1f}% off "
+                "the size the card's edges say it should be, where within "
+                "1% is normal. One of the card's edges is probably in the "
+                "wrong place, or the card is in a sleeve."))
+            if not card_id:
+                why = (f"the hexagon is {dev:+.1f}% off the size the card's "
+                       "edges say it should be, so an edge is in the wrong "
+                       "place")
+                hexrep.shift_mm[ax] = Measurement.refused(
+                    "mm", "The card was not identified, so the print shift "
+                    f"has to come from the ink-cost hexagon, and {why}.",
+                    RESHOOT)
+    if not card_id:
+        return _finish_from_hexagon(res, hexrep, game, rgb, lines,
+                                    photo, out_dir, make_overlay, quad,
+                                    inp.px_per_mm)
+
     # --- map physical edges into render space ---
     rlines = {}
     for side in _SIDES:
@@ -805,6 +847,8 @@ def analyze_borderless(photo: str | Path, card_id: str, game: GameSpec,
         else:
             m.status = "estimated"
 
+    _hex_cross_check(res, hexrep, game)
+
     # --- grading-style equivalent ratios (convention, not measurement) ---
     def equiv(axis, shift, total_margin):
         # shift>0 = print toward right/bottom edge = right/bottom margin smaller
@@ -860,8 +904,128 @@ def analyze_borderless(photo: str | Path, card_id: str, game: GameSpec,
             f"  T/B {res.equivalent_ratio_tb.display or 'not measured'}",
             f"matched to official picture: {n_inl} points, "
             f"{med_err:.2f}px apart"])
+        if hexrep.status == "measured":
+            _draw_hex_in_photo(ov, hexrep, quad, game, inp.px_per_mm)
         out = Path(out_dir) if out_dir else Path(photo).parent
         out.mkdir(parents=True, exist_ok=True)
         res.overlay = ov.save(out / (Path(photo).stem + "_front_overlay.jpg"))
 
     return res
+
+
+# --- ink-cost hexagon: cross-check and card-unknown result ---------------
+
+# the hexagon and the official picture disagree by more than this many
+# sigmas (of the terms they do not share) before it is worth saying
+HEX_AGREE_SIGMAS = 2.5
+
+
+def _hex_cross_check(res, hexrep, game):
+    """Compare the hexagon's shift with the official-picture shift."""
+    if hexrep.status != "measured":
+        res.qa.append(QAFlag(
+            "HEX_CHECK_SKIPPED",
+            "The ink-cost hexagon check could not be run: "
+            f"{hexrep.refusal_reason}.", severity="info"))
+        return
+    bias_unc = game.render_crop_bias_unc_mm or {}
+    agree, bad = {}, []
+    for ax, name in (("x", "left to right"), ("y", "top to bottom")):
+        a, b = hexrep.shift_mm[ax], res.shift_mm.get(ax)
+        if b is None or b.status == "refused" or a.status == "refused":
+            continue
+        d = a.value - b.value
+        agree[ax] = d
+        common = bias_unc.get(ax, 0.0)
+        sig = math.sqrt(max(a.uncertainty.total ** 2
+                            + b.uncertainty.total ** 2
+                            - 2 * common ** 2, 1e-6))
+        if abs(d) > HEX_AGREE_SIGMAS * sig:
+            bad.append(f"{name} they are {abs(d):.2f}mm apart, where up to "
+                       f"{HEX_AGREE_SIGMAS * sig:.2f}mm is normal")
+    hexrep.agreement_mm = agree or None
+    if bad:
+        res.qa.append(QAFlag(
+            "HEX_ANCHOR_DISAGREES",
+            "Two independent ways of measuring the print shift - matching "
+            "the official card picture, and where the ink-cost hexagon "
+            "sits - disagree: " + "; ".join(bad) + ". The hexagon only "
+            "uses the top and left edges, so one of the card's edges is "
+            "probably in the wrong place."))
+
+
+def _finish_from_hexagon(res, hexrep, game, rgb, lines, photo,
+                         out_dir, make_overlay, quad, ppm):
+    """Card not known: the hexagon's shift is the result."""
+    res.render = None
+    if hexrep.status != "measured":
+        reason = ("The card was not identified, so the print shift has to "
+                  "come from the ink-cost hexagon, and "
+                  f"{hexrep.refusal_reason}.")
+        advice = ("Tell the analyser which card it is, or re-shoot flat and "
+                  "in focus so the hexagon in the top-left corner is sharp.")
+        res.shift_mm = {"x": Measurement.refused("mm", reason, advice),
+                        "y": Measurement.refused("mm", reason, advice)}
+        res.equivalent_ratio_lr = Ratio.refused("LR", reason, advice)
+        res.equivalent_ratio_tb = Ratio.refused("TB", reason, advice)
+        return res
+    res.qa.append(QAFlag(
+        "HEX_ANCHOR_USED",
+        "The card was not identified, so the print shift comes from where "
+        "the ink-cost hexagon sits against the top and left edges ("
+        f"{hexrep.centre_from_left_mm:.2f}mm and "
+        f"{hexrep.centre_from_top_mm:.2f}mm; on a centred card "
+        f"{hexrep.expected_from_left_mm:.2f}mm and "
+        f"{hexrep.expected_from_top_mm:.2f}mm).", severity="info"))
+    for note in hexrep.notes:
+        res.qa.append(QAFlag("HEX_LAYOUT_ASSUMED", note, severity="info"))
+    res.shift_mm = dict(hexrep.shift_mm)
+    for ax in ("x", "y"):
+        m = res.shift_mm[ax]
+        if m.status == "estimated" and m.uncertainty.total > CAP_MM:
+            res.shift_mm[ax] = Measurement.refused(
+                "mm", f"An edge this depends on could only be estimated, "
+                f"and the estimate is good to no better than "
+                f"{m.uncertainty.total:.2f}mm - past the {CAP_MM:.1f}mm "
+                "limit for a number worth quoting.", RESHOOT)
+    res.equivalent_ratio_lr = equivalent_ratio(
+        "LR", res.shift_mm["x"], game.equiv_margin_lr_mm)
+    res.equivalent_ratio_tb = equivalent_ratio(
+        "TB", res.shift_mm["y"], game.equiv_margin_tb_mm)
+    if make_overlay:
+        ov = Overlay(rgb)
+        for side in _SIDES:
+            ov.line(lines[side], C_EDGE)
+        _draw_hex_in_photo(ov, hexrep, quad, game, ppm)
+
+        def _fmt(m):
+            if m.value is None:
+                return "not measured"
+            return f"{'~' if m.status == 'estimated' else ''}{m.value:+.2f}mm"
+        ov.banner([
+            f"FRONT print shift: x {_fmt(res.shift_mm['x'])}  "
+            f"y {_fmt(res.shift_mm['y'])}",
+            "(+x = print sits toward the right edge, +y = toward bottom)",
+            f"same as L/R {res.equivalent_ratio_lr.display or 'not measured'}"
+            f"  T/B {res.equivalent_ratio_tb.display or 'not measured'}",
+            f"from the {hexrep.layout} ink hexagon: x = where it is, "
+            "+ = where it sits on a centred card"])
+        out = Path(out_dir) if out_dir else Path(photo).parent
+        out.mkdir(parents=True, exist_ok=True)
+        res.overlay = ov.save(out / (Path(photo).stem + "_front_overlay.jpg"))
+    return res
+
+
+def _draw_hex_in_photo(ov, hexrep, quad, game, ppm):
+    """Fitted hexagon centre, and where it would be on a centred card."""
+    import cv2
+    Hinv = np.linalg.inv(G.homography_to_card(quad, game.card_w_mm,
+                                              game.card_h_mm))
+    pts = G.transform_points(Hinv, np.array([
+        [hexrep.centre_from_left_mm, hexrep.centre_from_top_mm],
+        [hexrep.expected_from_left_mm, hexrep.expected_from_top_mm]]))
+    size = max(8, int(0.8 * ppm))
+    cv2.drawMarker(ov.img, tuple(int(round(v)) for v in pts[0]), C_FRAME,
+                   cv2.MARKER_TILTED_CROSS, size, ov.lw)
+    cv2.drawMarker(ov.img, tuple(int(round(v)) for v in pts[1]), C_EDGE,
+                   cv2.MARKER_CROSS, size, ov.lw)

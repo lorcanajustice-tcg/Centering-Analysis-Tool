@@ -97,6 +97,31 @@ FLAGS: dict[str, tuple[str, str]] = {
         "Nothing to do. It is measured the same way. Just note that if it "
         "was cropped out of a phone photo, the lens bending near the "
         "original photo edge is not corrected for."),
+    "HEX_ANCHOR_USED": (
+        "Measured from the ink-cost hexagon",
+        "Nothing to do. Naming the card as well adds a second, independent "
+        "measurement to check this one against."),
+    "HEX_ANCHOR_DISAGREES": (
+        "The two front measurements disagree",
+        "Look at the overlay picture: the top or left edge is probably in "
+        "the wrong place. Re-shoot on plain white paper with soft light "
+        "from all sides."),
+    "HEX_SCALE_MISMATCH": (
+        "The ink-cost hexagon is the wrong size for this card",
+        "Take the card out of its sleeve and re-shoot flat. If it still "
+        "happens, check the overlay picture for an edge in the wrong "
+        "place."),
+    "HEX_LAYOUT_ASSUMED": (
+        "The hexagon's printed position was assumed",
+        "If the card is from one of the sets named, give its set and "
+        "number so the right position is used."),
+    "HEX_LAYOUT_CHOSEN": (
+        "Two hexagon designs fitted; one was picked by its look",
+        "If the result looks wrong, give the card's set and number so the "
+        "right design is used."),
+    "HEX_CHECK_SKIPPED": (
+        "The ink-cost hexagon cross-check did not run",
+        "Nothing to do - the main result does not depend on it."),
     "RADIAL_DISTORTION_RISK": (
         "The card is too close to the edge of the photo",
         "Move back, or re-frame, so there is a clear gap - about a "

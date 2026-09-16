@@ -20,9 +20,7 @@ def analyze_card(back_photo: Optional[str] = None,
                  front_manual_bbox: Optional[tuple] = None) -> CardResult:
     if back_photo is None and front_photo is None:
         raise ValueError("Choose at least one photo.")
-    if front_photo is not None and card_id is None:
-        raise ValueError("A card ID is needed to analyse the front, so "
-                         "the official card picture can be looked up.")
+    # a front without a card ID is measured from the ink-cost hexagon
 
     res = CardResult(game=game.name)
     if back_photo:

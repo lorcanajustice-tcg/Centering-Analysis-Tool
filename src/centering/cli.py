@@ -82,6 +82,22 @@ def _summary_front(r):
         lines.append(f"  Matched to the official picture of the card using "
                      f"{r.render.n_inliers} points,")
         lines.append(f"  lining up to {r.render.median_reproj_px:.1f} pixels.")
+    hx = r.hex_check
+    if hx is not None and hx.status == "measured":
+        if r.method == "ink_hexagon":
+            lines.append(_wrap(
+                "Measured from where the ink-cost hexagon sits: "
+                f"{hx.centre_from_left_mm:.2f}mm from the left edge and "
+                f"{hx.centre_from_top_mm:.2f}mm from the top, against "
+                f"{hx.expected_from_left_mm:.2f}mm and "
+                f"{hx.expected_from_top_mm:.2f}mm on a centred "
+                f"{hx.layout} card.", "  "))
+        elif hx.agreement_mm:
+            parts = [f"{abs(v):.2f}mm {'across' if k == 'x' else 'down'}"
+                     for k, v in hx.agreement_mm.items()]
+            lines.append(_wrap(
+                "Cross-check from the ink-cost hexagon agrees to within "
+                + " and ".join(parts) + ".", "  "))
     return lines
 
 
@@ -125,8 +141,18 @@ def main(argv=None):
     b.add_argument("photo", help="photo of the back")
     f = sub.add_parser("front", help="check the front of a card")
     f.add_argument("photo", help="photo of the front")
-    f.add_argument("--card", required=True,
-                   help='which card it is, e.g. "8-210", or part of its name')
+    f.add_argument("--card", default=None,
+                   help='which card it is, e.g. "8-210", or part of its '
+                        'name. Without it, the print shift is measured '
+                        'from the ink-cost hexagon instead')
+    k = sub.add_parser("corner",
+                       help="check the front from a close-up of its "
+                            "top-left corner")
+    k.add_argument("photo", help="close-up of the top-left corner, with "
+                                 "the whole ink-cost hexagon and some "
+                                 "background beyond both edges")
+    k.add_argument("--card", default=None,
+                   help='which card it is, if known, e.g. "8-210"')
     c = sub.add_parser("card", help="check both sides and compare them")
     c.add_argument("--back", dest="back_photo", help="photo of the back")
     c.add_argument("--front", dest="front_photo", help="photo of the front")
@@ -145,6 +171,15 @@ def main(argv=None):
         from .borderless import analyze_borderless
         r = analyze_borderless(args.photo, args.card, game, out_dir=args.out)
         _emit(r, args, _summary_front(r))
+        if r.overlay:
+            print(f"Marked-up picture, so you can check it yourself: {r.overlay}")
+    elif args.cmd == "corner":
+        from .hexanchor import analyze_corner
+        r = analyze_corner(args.photo, game, card_id=args.card,
+                           out_dir=args.out)
+        lines = _summary_front(r)
+        lines[0] = f"FRONT OF THE CARD, TOP-LEFT CORNER  ({r.input.photo})"
+        _emit(r, args, lines)
         if r.overlay:
             print(f"Marked-up picture, so you can check it yourself: {r.overlay}")
     else:

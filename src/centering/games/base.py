@@ -15,6 +15,51 @@ class FrameLineSpec:
 
 
 @dataclass
+class HexLayout:
+    """One printed design of the ink-cost hexagon, in official-picture px.
+
+    `rings` are the two edges of the hexagon's ring, inner then outer, each
+    (centre dx, centre dy, vertical-side apothem, slanted-side apothem)
+    with the centre given relative to `centre_px`. `centre_px` is the mean
+    of the two ring-edge centres."""
+    name: str
+    centre_px: tuple
+    rings: tuple
+    swirl: bool = False          # the flower-shaped surround (inkable)
+
+    @property
+    def mean_apothem_px(self) -> float:
+        return sum(0.5 * (r[2] + r[3]) for r in self.rings) / len(self.rings)
+
+
+@dataclass
+class HexAnchorSpec:
+    """Where the ink-cost hexagon is printed, for the card-agnostic front
+    check (hexanchor.py). All positions are in official-picture pixels and
+    turned into millimetres with `render_px_per_mm`."""
+    render_size: tuple                       # (width, height) px
+    render_px_per_mm: float                  # physical print scale
+    render_px_per_mm_rel_unc: float
+    layouts: dict                            # name -> HexLayout
+    default_layouts: tuple                   # tried when the card is unknown
+    # (layout name, set codes) -> centre_px for older printings of a layout
+    older_layouts: dict = field(default_factory=dict)
+    # per-card survey of every official picture (relative to the game's
+    # local card database folder), used when the card is known
+    percard_csv: Optional[str] = None
+    # search window around the expected centre, mm
+    search_mm: float = 2.0
+    # hexagon size that disagrees with the card size by more than this is
+    # flagged (fraction)
+    scale_tol: float = 0.02
+    # print scale beyond the calibration: dot gain, ring-width variants
+    size_rel_unc: float = 0.004
+    # card size spread, mm (1 sigma), per axis
+    card_size_sd_mm: dict = field(default_factory=lambda: {"x": 0.07,
+                                                           "y": 0.08})
+
+
+@dataclass
 class GameSpec:
     name: str
     card_w_mm: float
@@ -56,6 +101,9 @@ class GameSpec:
     # violating these cannot be the physical cut (cast shadow / curl /
     # glare). None disables the gate (uncalibrated game).
     render_span_bounds_mm: Optional[dict] = None
+    # card-agnostic front check from the printed ink-cost hexagon; None
+    # when the game has no calibrated layout
+    hex_anchor: Optional[HexAnchorSpec] = None
 
     def edge_def_mm(self, face: str, method: str, axis: str,
                     px_per_mm: float) -> float:

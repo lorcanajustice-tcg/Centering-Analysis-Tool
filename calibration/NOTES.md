@@ -162,3 +162,73 @@ quoted as a pure render-pipeline property. Mean back frame-vs-cut offsets
 over the five cards: x -0.03mm, y -0.15mm (top border < bottom border on
 average) - either the frame sits high in the back design or these cards'
 die cuts sit high; indistinguishable with n=5 from one print run.
+
+
+# Ink-cost hexagon anchor (2026-09-16)
+
+The card-agnostic front check (`src/centering/hexanchor.py`) rests on
+three numbers, all in `games/lorcana.py` (`LORCANA_HEX`).
+
+## Where the hexagon is printed
+
+`hex_anchor_survey.py` fits the hexagon in every official picture and
+`hex_anchor_report.py` summarises it into `card_db/hex_anchors_report.json`.
+The centre is fixed to ~0.005px (robust sd) within a layout:
+
+| layout | pictures | centre px |
+|---|---|---|
+| inkable | 2,427 | 146.560, 156.788 |
+| uninkable, set 4 on | 576 | 146.302, 155.565 |
+| uninkable, sets 1-3 | 179 | 149.598, 155.567 |
+| uninkable, set-10 parchment (hexagon 11.7% bigger) | 6 | 146.334, 155.545 |
+
+The sets 1-3 move is a layout change: frame lines and footer emblem stay
+put. About 350 inkable cards (mostly sets 5 and 7) print a thicker ring
+(apothems 57.15 / 67.16 instead of 57.74 / 66.62); the centre and the mean
+of the two ring edges are unchanged, so they need nothing. 11-241, 11-242
+and 13-244 have layouts of their own and are refused. A known card uses its
+own survey row (`card_db/hex_anchors_percard.csv`); an unknown one is
+assumed to be set 4 on.
+
+Ring-edge apothems were split into vertical and slanted sides from a
+401-picture re-fit: the printed hexagons are not exactly regular (inkable
+inner edge 57.52 vertical, 57.85 slanted). Without that the joint fit reads
+the difference as the photo being stretched.
+
+## The picture's print scale: 23.64 px/mm
+
+Needed because the hexagon sits ~25mm (across) and ~37mm (down) from the
+picture centre, so a 1% scale error is a 0.25-0.37mm error. From the
+render-to-cut widths of the eight clean fronts (IMG_6330, 6341, 6397,
+6401, 6403, 6405, 6407, 6409): x totals 0.81-0.90mm, giving 23.65 +- 0.02
+px/mm. The top/bottom totals would give 23.72, but they carry the
+picture's looser vertical crop. Three independent checks pick 23.64 and a
+square-pixelled picture:
+
+- the hexagon's top-edge distance on those fronts (predicted 7.186mm,
+  measured 7.181 +- 0.032);
+- the hexagon's printed size in the straightened photos, 0.16% under
+  23.64, which is exactly the known front-rim excess (`cut_def_mm`);
+- the joint fit on the official pictures themselves returns 23.63-23.65.
+
+Carried as +-0.1%.
+
+## Validation (hexagon minus official-picture shift, same photos)
+
+| | across mean / rms / max | down mean / rms / max |
+|---|---|---|
+| full card | +0.013 / 0.034 / 0.068 | -0.005 / 0.088 / 0.170 |
+| corner crop, 35mm | +0.024 / 0.041 / 0.073 | -0.005 / 0.102 / 0.183 |
+| corner crop, 21mm | +0.009 / 0.048 / 0.077 | +0.002 / 0.085 / 0.168 |
+| corner crop, 35mm at 0.35x (~12 px/mm) | -0.052 / 0.090 / 0.182 | -0.029 / 0.074 / 0.108 |
+
+Normalised by the combined margins (less the crop-bias term both share)
+the rms is 0.4-0.8, so the quoted margins are honest, slightly generous.
+The top-to-bottom scatter is larger because the hexagon depends on the top
+edge alone, where the official-picture match averages top and bottom.
+
+Known limit: without the official picture there is no render-span gate. On
+IMG_6416 (Tramp 7:212) the top edge sits ~0.3mm up on a cast shadow; the
+official-picture path refuses top-to-bottom, the card-unknown path reports
+it. The hexagon's per-axis size check only catches gross (2%) edge errors:
+its own scatter on clean photos is about +-0.7%.

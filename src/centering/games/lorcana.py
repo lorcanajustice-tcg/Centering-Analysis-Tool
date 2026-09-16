@@ -1,7 +1,47 @@
 """Disney Lorcana adapter."""
 from __future__ import annotations
 
-from .base import FrameLineSpec, GameSpec
+from .base import FrameLineSpec, GameSpec, HexAnchorSpec, HexLayout
+
+# Ink-cost hexagon layouts (2026-09-16). Survey of all 3,226 official
+# pictures: calibration/hex_anchor_survey.py -> card_db/hex_anchors_report.json.
+# Inside a layout the centre is fixed to ~0.005px (robust sd). Ring-edge
+# apothems split into vertical and slanted sides from a 401-picture
+# re-fit: the printed hexagons are not exactly regular.
+# render_px_per_mm: the official picture's own print scale, 23.64 +-0.03
+# px/mm from the render-to-cut widths of eight clean fronts (2026-07-06
+# reshoot + fixtures; x totals 0.81-0.90mm). The picture is square-pixelled:
+# the same scale predicts the hexagon's top-edge distance on those fronts
+# to 0.005mm and its printed size to 0.16% (the known front-rim excess).
+# The top/bottom render-to-cut totals would suggest 23.72, but they carry
+# the picture's looser vertical crop, and 23.72 misses the hexagon's
+# top-edge distance by 0.12mm.
+LORCANA_HEX = HexAnchorSpec(
+    render_size=(1468, 2048),
+    render_px_per_mm=23.64,
+    render_px_per_mm_rel_unc=0.001,
+    layouts={
+        "inkable": HexLayout(
+            "inkable", (146.560, 156.788),
+            ((-0.007, +0.0105, 57.522, 57.849),
+             (+0.007, -0.0105, 66.446, 66.625)), swirl=True),
+        "uninkable": HexLayout(
+            "uninkable", (146.302, 155.565),
+            ((-0.1285, -0.010, 67.863, 67.614),
+             (+0.1285, +0.010, 78.555, 78.548))),
+        # the six set-10 parchment-frame uninkable cards: same centre,
+        # hexagon 11.7% bigger. Only used when the card is known.
+        "uninkable_large": HexLayout(
+            "uninkable_large", (146.334, 155.545),
+            ((-0.100, 0.0, 75.726, 75.632),
+             (+0.100, 0.0, 87.521, 87.749))),
+    },
+    default_layouts=("inkable", "uninkable"),
+    # sets 1-3 printed the uninkable hexagon 3.3px (0.14mm) further right
+    # (frame and footer emblem unchanged, so a layout change, not crop)
+    older_layouts={("uninkable", ("1", "2", "3")): (149.598, 155.567)},
+    percard_csv="hex_anchors_percard.csv",
+)
 
 LORCANA = GameSpec(
     name="lorcana",
@@ -94,6 +134,7 @@ LORCANA = GameSpec(
     # The back's own term is left at zero: the DIG comparison bounds it
     # below 0.010mm, under the detector term already in edge_def_px.
     cut_def_mm={"front": {"x": 0.05, "y": 0.08}},
+    hex_anchor=LORCANA_HEX,
 )
 
 ALLCARDS_URL = "https://lorcanajson.org/files/current/en/allCards.json"

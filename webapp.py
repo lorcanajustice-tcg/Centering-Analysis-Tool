@@ -71,32 +71,35 @@ def run_analysis(payload: dict) -> dict:
         elif mode == "front":
             if "front" not in paths:
                 raise ValueError("Add a photo of the front of the card.")
-            if not card_id:
-                raise ValueError(
-                    "Say which card this is so the official picture can be "
-                    'looked up - for example "8-210", or part of the '
-                    "card's name.")
-            res = analyze_borderless(paths["front"], card_id, LORCANA,
-                                     out_dir=out_dir, manual_bbox=mb)
+            # no card: the print shift comes from the ink-cost hexagon
+            res = analyze_borderless(paths["front"], card_id or None,
+                                     LORCANA, out_dir=out_dir,
+                                     manual_bbox=mb)
             faces = {"front": res}
             result = res.to_dict()
         elif mode == "card":
             if "back" not in paths or "front" not in paths:
                 raise ValueError("Checking the front and the back needs "
                                  "both photos.")
-            if not card_id:
-                raise ValueError(
-                    "Say which card this is so the official picture can be "
-                    'looked up - for example "8-210".')
             res = analyze_card(back_photo=paths["back"],
                                front_photo=paths["front"],
-                               card_id=card_id, game=LORCANA, out_dir=out_dir,
+                               card_id=card_id or None, game=LORCANA,
+                               out_dir=out_dir,
                                front_manual_bbox=mb)
             faces = {"back": res.back, "front": res.front}
             result = res.to_dict()
+        elif mode == "corner":
+            from centering.hexanchor import analyze_corner
+            if "front" not in paths:
+                raise ValueError("Add a close-up of the top-left corner of "
+                                 "the front.")
+            res = analyze_corner(paths["front"], LORCANA,
+                                 card_id=card_id or None, out_dir=out_dir)
+            faces = {"front": res}
+            result = res.to_dict()
         else:
-            raise ValueError("Choose front and back, back only, or front "
-                             "only.")
+            raise ValueError("Choose front and back, back only, front "
+                             "only, or a corner close-up.")
 
     (out_dir / "result.json").write_text(json.dumps(result, indent=2))
     overlays = {}
